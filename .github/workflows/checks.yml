@@ -25,7 +25,7 @@ jobs:
       - run: find app public deploy tests -name '*.php' -print0 | xargs -0 -n1 php -l
       - run: node --check dist/app.js
       - run: node tests/static.mjs
-      - run: bash -n deploy/install.sh
+      - run: bash -n deploy/install.sh && bash -n deploy/bootstrap.sh
       - run: bash deploy/install.sh --check
       - run: php tests/unit.php
       - name: Create ephemeral test configuration

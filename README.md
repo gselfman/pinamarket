@@ -4,7 +4,13 @@
 
 ## Установка через Bash
 
-В терминале хостинга вставьте:
+В терминале **Bash** хостинга вставьте одну команду:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/gselfman/pinamarket/main/deploy/bootstrap.sh)
+```
+
+Установщик скачает код в `$HOME/pinamarket-code` (Git либо архив) и запустит настройку. При повторном запуске обновит существующую установку, сохранив её настройки. Если предпочитаете видеть отдельные шаги:
 
 ```bash
 git clone https://github.com/gselfman/pinamarket.git "$HOME/pinamarket-code"

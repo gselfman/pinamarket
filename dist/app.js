@@ -111,7 +111,7 @@ const SERVICES = [ {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit", timeZone: "Europe/Moscow"
 }), uid = () => {
     const b = crypto.getRandomValues(new Uint8Array(16));
     b[6] = 15 & b[6] | 64, b[8] = 63 & b[8] | 128;
@@ -259,7 +259,7 @@ function tag(o) {
 }
 
 function operationTable(list, admin = !1) {
-    return list.length ? `<div class="table-wrap"><table><thead><tr><th>№ / дата</th>${admin ? "<th>Клиент</th>" : ""}<th>Назначение</th><th>Сумма</th><th>Статус</th><th></th></tr></thead><tbody>${list.map(o => `<tr><td><b>№${o.id}</b><div class="note">${date(o.created)}</div></td>${admin ? `<td><b>ID ${o.clientId}</b><div class="note">${esc(o.email)}</div></td>` : ""}<td>${esc("deposit" === o.kind ? "Наличными в кассе" : o.service)}<div class="note">${esc(o.product || "Пополнение Pina.market")}</div></td><td><b>${money(o.total)}</b></td><td>${tag(o)}</td><td><button class="textbtn" data-action="detail" data-id="${o.id}">Открыть →</button></td></tr>`).join("")}</tbody></table></div>` : '<div class="empty">Записей пока нет</div>';
+    return list.length ? `<div class="table-wrap"><table><thead><tr><th>№ / дата (МСК)</th>${admin ? "<th>Клиент</th>" : ""}<th>Назначение</th><th>Сумма</th><th>Статус</th><th></th></tr></thead><tbody>${list.map(o => `<tr><td><b>№${o.id}</b><div class="note">${date(o.created)}</div></td>${admin ? `<td><b>ID ${o.clientId}</b><div class="note">${esc(o.email)}</div></td>` : ""}<td>${esc("deposit" === o.kind ? "Наличными в кассе" : o.service)}<div class="note">${esc(o.product || "Пополнение Pina.market")}</div></td><td><b>${money(o.total)}</b></td><td>${tag(o)}</td><td><button class="textbtn" data-action="detail" data-id="${o.id}">Открыть →</button></td></tr>`).join("")}</tbody></table></div>` : '<div class="empty">Записей пока нет</div>';
 }
 
 function params() {
@@ -295,7 +295,7 @@ function openModal(html, wide = !1) {
 }
 
 function closeModal() {
-    $("#modal").hidden = !0, document.body.style.overflow = "", lastFocus?.focus();
+    $("#modal").hidden = !0, document.body.style.overflow = "", $("#modal").replaceChildren(), lastFocus?.focus();
 }
 
 function auth(mode = "login") {
