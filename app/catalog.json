@@ -1,0 +1,79 @@
+[
+  {
+    "id": "steam",
+    "name": "Steam",
+    "desc": "Steam Wallet, игры и контент",
+    "type": "Пополнение Steam Wallet",
+    "cat": "Игры"
+  },
+  {
+    "id": "ps",
+    "name": "PlayStation",
+    "desc": "PSN Wallet и цифровые коды",
+    "type": "Подарочная карта / код",
+    "cat": "Игры"
+  },
+  {
+    "id": "xbox",
+    "name": "Xbox",
+    "desc": "Gift Card, игры и Game Pass",
+    "type": "Gift Card / Game Pass",
+    "cat": "Игры"
+  },
+  {
+    "id": "nintendo",
+    "name": "Nintendo eShop",
+    "desc": "Баланс, игры и коды",
+    "type": "Подарочная карта / код",
+    "cat": "Игры"
+  },
+  {
+    "id": "apple",
+    "name": "Apple",
+    "desc": "Gift Card, Apple Account, App Store",
+    "type": "Apple Gift Card",
+    "cat": "Приложения"
+  },
+  {
+    "id": "google",
+    "name": "Google Play",
+    "desc": "Карты, приложения и контент",
+    "type": "Подарочная карта",
+    "cat": "Приложения"
+  },
+  {
+    "id": "roblox",
+    "name": "Roblox",
+    "desc": "Подарочные карты и Robux",
+    "type": "Gift Card / Robux",
+    "cat": "Игры"
+  },
+  {
+    "id": "razer",
+    "name": "Razer Gold",
+    "desc": "Предоплаченные игровые продукты",
+    "type": "Предоплаченный продукт",
+    "cat": "Игры"
+  },
+  {
+    "id": "discord",
+    "name": "Discord",
+    "desc": "Nitro и подарочные подписки",
+    "type": "Nitro / подарочная подписка",
+    "cat": "Подписки"
+  },
+  {
+    "id": "spotify",
+    "name": "Spotify",
+    "desc": "Подарочные карты и подписки",
+    "type": "Карта / подписка",
+    "cat": "Подписки"
+  },
+  {
+    "id": "netflix",
+    "name": "Netflix",
+    "desc": "Подарочные карты и подписки",
+    "type": "Карта / подписка",
+    "cat": "Подписки"
+  }
+]
