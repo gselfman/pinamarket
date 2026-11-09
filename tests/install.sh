@@ -25,10 +25,7 @@ php_pid=$!
 sudo python3 tests/network_fixture.py "$PINA_INSTALL_TEMP/cert.crt" "$PINA_INSTALL_TEMP/key.pem" > "$PINA_INSTALL_TEMP/tls.log" 2>&1 &
 tls_pid=$!
 for attempt in $(seq 1 20); do if curl --noproxy '*' --silent https://pina.install.test/ > /dev/null; then break; fi; sleep 1; done
-bash "$PINA_INSTALL_TEMP/code/deploy/install.sh" <<INPUT
-https://pina.install.test
-/www/pina.market
-$PINA_INSTALL_TEMP/htdocs
+PINA_BASE_URL=https://pina.install.test PINA_PUBLIC_DIR="$PINA_INSTALL_TEMP/htdocs" bash "$PINA_INSTALL_TEMP/code/deploy/install.sh" <<INPUT
 127.0.0.1
 3306
 pina_install_test
@@ -46,6 +43,7 @@ PinaInstall2026-LongPassword
 Confirmed CI cash desk
 ЗАМЕНИТЬ
 INPUT
+php -r '$c=require $argv[1];if($c["public_dir"]!==$argv[2]||$c["base_url"]!=="https://pina.install.test")exit(1);' "$PINA_INSTALL_TEMP/code/app/config.php" "$PINA_INSTALL_TEMP/htdocs"
 [[ ! -e "$PINA_INSTALL_TEMP/htdocs/admin" ]]
 [[ "$(cat "$PINA_INSTALL_TEMP/htdocs/.well-known/token.txt")" == 'CERTIFICATE TOKEN' ]]
 [[ -f "$PINA_INSTALL_TEMP/code/app/config.php" && -f "$PINA_INSTALL_TEMP/htdocs/index.php" ]]

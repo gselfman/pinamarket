@@ -28,7 +28,7 @@ try{
  else{
   if(is_file($configFile))throw new RuntimeException('Настройки уже существуют. Для обновления используйте --update.');
   out('Установка Pina.market. Секреты не передаются в аргументах команд и не попадают в Git.');
-  $url=rtrim(ask('HTTPS-адрес сайта','https://pina.market'),'/');if(!preg_match('~^https://[a-zA-Z0-9.-]+$~D',$url))throw new RuntimeException('Нужен HTTPS-домен без пути.');
+  $url=rtrim(getenv('PINA_BASE_URL')?:ask('HTTPS-адрес сайта','https://pina.market'),'/');if(!preg_match('~^https://[a-zA-Z0-9.-]+$~D',$url))throw new RuntimeException('Нужен HTTPS-домен без пути.');
   $host=parse_url($url,PHP_URL_HOST);$home=rtrim((string)getenv('HOME'),'/');$candidates=[];
   foreach([$home.'/www',$home.'/data/www',$home.'/public_html',$home.'/htdocs'] as $parent){
    if(!is_dir($parent))continue;
@@ -37,12 +37,15 @@ try{
   $candidates=array_values(array_unique($candidates));
   if($candidates){out('Найдены каталоги домена (сверьте с панелью):');foreach($candidates as $i=>$candidate)out('  '.($i+1).'. '.$candidate);}
   $guess=$candidates[0]??(is_dir($home.'/public_html')?$home.'/public_html':'');
+  $presetPublic=getenv('PINA_PUBLIC_DIR');
+  if($presetPublic!==false&&$presetPublic!=='')out('Каталог сайта задан: '.$presetPublic);
   while(true){
-   $public=trim(ask('Полный путь из панели или номер найденного каталога; Enter — предложенный путь',$guess));
+   $public=trim(($presetPublic!==false&&$presetPublic!=='')?$presetPublic:ask('Полный путь из панели или номер найденного каталога; Enter — предложенный путь',$guess));
    if(ctype_digit($public)&&isset($candidates[(int)$public-1]))$public=$candidates[(int)$public-1];
    if(str_starts_with($public,'~/'))$public=$home.substr($public,1);
    $public=rtrim($public,'/');
    if($public!==''&&str_starts_with($public,'/')&&is_dir($public)&&is_writable($public)&&is_writable(dirname($public)))break;
+   if($presetPublic!==false&&$presetPublic!=='')throw new RuntimeException('PINA_PUBLIC_DIR: каталог не существует либо нет прав записи в него или его родителя.');
    out('Путь не найден либо нет прав записи в каталог/его родителя: '.$public);
    out('Нужен полный путь от корня сервера, например '.$home.'/www/'.$host.'. /www и '.$home.'/www — разные каталоги. Попробуйте снова.');
   }
