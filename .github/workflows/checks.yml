@@ -4,7 +4,7 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       mysql:
         image: mysql:8.0
@@ -87,9 +87,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y apache2 libapache2-mod-php8.2
+          sudo apt-get install -y apache2 libapache2-mod-php8.3 php8.3-mysql php8.3-mbstring
           sudo a2dismod mpm_event || true
-          sudo a2enmod mpm_prefork rewrite php8.2
+          sudo a2enmod mpm_prefork rewrite php8.3
       - name: Test actual Apache htaccess routing with stale physical folders
         if: ${{ !cancelled() }}
         run: bash tests/apache.sh
