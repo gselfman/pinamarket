@@ -29,9 +29,23 @@ try{
   if(is_file($configFile))throw new RuntimeException('Настройки уже существуют. Для обновления используйте --update.');
   out('Установка Pina.market. Секреты не передаются в аргументах команд и не попадают в Git.');
   $url=rtrim(ask('HTTPS-адрес сайта','https://pina.market'),'/');if(!preg_match('~^https://[a-zA-Z0-9.-]+$~D',$url))throw new RuntimeException('Нужен HTTPS-домен без пути.');
-  $host=parse_url($url,PHP_URL_HOST);$guess='';foreach([getenv('HOME').'/www/'.$host,getenv('HOME').'/public_html'] as $candidate)if(is_dir($candidate)){$guess=$candidate;break;}
-  $public=ask('Полный путь к действующему каталогу сайта из панели reg.ru',$guess);$public=rtrim($public,'/');
-  if($public===''||!is_dir($public)||!is_writable($public))throw new RuntimeException('Каталог сайта должен существовать и быть доступен на запись.');
+  $host=parse_url($url,PHP_URL_HOST);$home=rtrim((string)getenv('HOME'),'/');$candidates=[];
+  foreach([$home.'/www',$home.'/data/www',$home.'/public_html',$home.'/htdocs'] as $parent){
+   if(!is_dir($parent))continue;
+   foreach(scandir($parent) as $name)if(strcasecmp($name,$host)===0&&is_dir($parent.'/'.$name))$candidates[]=realpath($parent.'/'.$name);
+  }
+  $candidates=array_values(array_unique($candidates));
+  if($candidates){out('Найдены каталоги домена (сверьте с панелью):');foreach($candidates as $i=>$candidate)out('  '.($i+1).'. '.$candidate);}
+  $guess=$candidates[0]??(is_dir($home.'/public_html')?$home.'/public_html':'');
+  while(true){
+   $public=trim(ask('Полный путь из панели или номер найденного каталога; Enter — предложенный путь',$guess));
+   if(ctype_digit($public)&&isset($candidates[(int)$public-1]))$public=$candidates[(int)$public-1];
+   if(str_starts_with($public,'~/'))$public=$home.substr($public,1);
+   $public=rtrim($public,'/');
+   if($public!==''&&str_starts_with($public,'/')&&is_dir($public)&&is_writable($public)&&is_writable(dirname($public)))break;
+   out('Путь не найден либо нет прав записи в каталог/его родителя: '.$public);
+   out('Нужен полный путь от корня сервера, например '.$home.'/www/'.$host.'. /www и '.$home.'/www — разные каталоги. Попробуйте снова.');
+  }
   $public=realpath($public);if(str_starts_with($root.'/', $public.'/')||str_starts_with($public.'/', $root.'/app/'))throw new RuntimeException('Исходный код и приватная папка должны находиться за пределами каталога сайта.');
   $db=['host'=>ask('Хост MySQL из панели','localhost'),'port'=>(int)ask('Порт MySQL','3306'),'name'=>ask('Полное имя базы с префиксом хостинга'),'user'=>ask('Пользователь MySQL'),'password'=>ask('Пароль MySQL','',true)];
   if(!preg_match('/^[a-zA-Z0-9.-]+$/D',$db['host'])||!preg_match('/^[a-zA-Z0-9_-]+$/D',$db['name']))throw new RuntimeException('Проверьте хост и имя базы.');
@@ -89,6 +103,8 @@ try{
  foreach(scandir($root.'/app') as $name){if(in_array($name,['.','..','config.php','config.php.new','template.html'],true)||str_ends_with($name,'.lock'))continue;$from=$root.'/app/'.$name;if(is_file($from))copy_file($from,$releaseApp.'/'.$name,0600);}
  put_private($releaseApp.'/config.php',"<?php\nreturn ".var_export($config,true).";\n");
  put_private($releaseApp.'/template.html',$html);
+ $assetHashes=[];foreach(['app.js','legal.js','style.css','pina-logo.png'] as $asset)$assetHashes[$asset]=hash_file('sha256',$root.'/dist/'.$asset);
+ put_private($releaseApp.'/release.json',json_encode(['id'=>$stamp,'assets'=>$assetHashes],JSON_THROW_ON_ERROR));
  foreach(['app.js','legal.js','style.css','pina-logo.png'] as $asset)copy_file($root.'/dist/'.$asset,$publishDir.'/'.$asset);
  foreach(['.htaccess','.user.ini'] as $asset)copy_file($root.'/public/'.$asset,$publishDir.'/'.$asset);
  put_private($publishDir.'/pina-path.php',"<?php\nreturn ".var_export($releaseApp,true).";\n");
@@ -97,9 +113,10 @@ try{
  if($initialPublish){$previous=dirname($public).'/.pinamarket-previous-'.$stamp;if(!rename($public,$previous))throw new RuntimeException('Не удалось сохранить прежний каталог сайта. Новые файлы оставлены в '.$publishDir);if(!rename($publishDir,$public)){rename($previous,$public);throw new RuntimeException('Переключение не удалось; прежний каталог восстановлен.');}out('Предыдущий каталог сохранён: '.$previous);}
  out('Файлы установлены. Админка: '.$config['base_url'].'/admin/');
  out('Проверка HTTPS и серверного приложения:');
- $ctx=stream_context_create(['http'=>['timeout'=>15,'ignore_errors'=>true],'ssl'=>['verify_peer'=>true,'verify_peer_name'=>true]]);
- $response=@file_get_contents($config['base_url'].'/api/health/',false,$ctx);$health=json_decode($response?:'',true);
- if(($health['status']??'')!=='ok'){
+ require_once __DIR__.'/verify.php';
+ $verifyError=null;try{$checked=verify_site($config['base_url'],$stamp,$assetHashes);foreach($checked as $route)out('OK '.$route);}catch(Throwable $error){$verifyError=$error->getMessage();}
+ if($verifyError!==null){
+  out($verifyError);
   if($initialPublish&&isset($previous)&&is_dir($previous)){$failed=dirname($public).'/.pinamarket-failed-'.$stamp;if(rename($public,$failed)&&rename($previous,$public))throw new RuntimeException('HTTPS-проверка не прошла. Прежний сайт восстановлен. Проверьте SSL, DNS и путь каталога, затем повторите с --update. Настройки и база сохранены.');}
   if(!$initialPublish&&$oldAppPath){put_private($public.'/pina-path.php',"<?php\nreturn ".var_export($oldAppPath,true).";\n");$restore='tar -xzf '.escapeshellarg($backup).' -C '.escapeshellarg($public).' ./app.js ./legal.js ./style.css ./pina-logo.png ./index.php ./.htaccess ./.user.ini';passthru($restore,$restoreCode);if($restoreCode!==0)throw new RuntimeException('HTTPS-проверка не прошла. Прежний backend включён, но файлы нужно восстановить из архива '.$backup);throw new RuntimeException('HTTPS-проверка не прошла. Прежняя версия приложения восстановлена; проверьте SSL и DNS, затем повторите обновление.');}
   throw new RuntimeException('HTTPS-проверка не прошла. Проверьте настройки домена; настройки и база сохранены.');
