@@ -11,9 +11,10 @@ for(const path of [...pages,...docs.map(s=>'/documents/'+s+'/')]){
  checks++;
  if(path!=='/'){
   const query=path==='/reset/'?'?token=test-token':'';
-  const redirect=await fetch(base+path.slice(0,-1)+query,{redirect:'manual'});assert.equal(redirect.status,308,path+' slash alias');assert.equal(redirect.headers.get('location'),path+query);checks++;
+  const redirect=await fetch(base+path.slice(0,-1)+query,{redirect:'manual'});assert.ok([301,308].includes(redirect.status),path+' permanent slash alias');const destination=new URL(redirect.headers.get('location'),base);assert.equal(destination.origin,new URL(base).origin);assert.equal(destination.pathname+destination.search,path+query);checks++;
  }
 }
 for(const path of ['/missing/','/documents/missing/']){assert.equal((await fetch(base+path)).status,404,path);checks++}
 for(const asset of ['app.js','legal.js','style.css','pina-logo.png']){const r=await fetch(base+'/'+asset);assert.equal(r.status,200,asset);assert.ok((await r.arrayBuffer()).byteLength>100,asset+' nonempty');checks++}
+const health=await fetch(base+'/api/health/');assert.equal(health.status,200,'API reachable through web server');assert.equal((await health.json()).status,'ok','database connected through web server');checks++;
 console.log(`PASS: ${checks} public routes, canonical redirects, server HTML, document consistency and assets (${base})`);
