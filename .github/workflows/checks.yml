@@ -24,7 +24,7 @@ jobs:
           coverage: none
       - run: find app public deploy tests -name '*.php' -print0 | xargs -0 -n1 php -l
       - run: node --check dist/app.js
-      - run: bash -n deploy/diagnose.sh
+      - run: bash -n deploy/diagnose.sh && bash -n deploy/regru.sh
       - run: node tests/static.mjs
       - run: bash -n deploy/install.sh && bash -n deploy/bootstrap.sh
       - run: bash deploy/install.sh --check

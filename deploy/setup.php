@@ -12,7 +12,12 @@ function ask(string $label,string $default='',bool $secret=false):string{
  if($secret&&$isTTY&&function_exists('shell_exec')){$settings=trim((string)shell_exec('stty -g'));if($settings!=='')shell_exec('stty -echo');}
  try{$v=fgets(STDIN);if($v===false)throw new RuntimeException('Ввод прерван. Запустите скрипт в интерактивном терминале.');}
  finally{if($settings!==null&&$settings!==''){shell_exec('stty '.escapeshellarg($settings));out('');}}
- $v=rtrim($v,"\r\n");return $v!==''?$v:$default;
+ $v=$secret?rtrim($v,"\r\n"):trim($v);return $v!==''?$v:$default;
+}
+function setting(string $key,string $label,string $default=''):string{
+ $preset=getenv($key);if($preset!==false)return trim($preset);
+ if(getenv('PINA_PASSWORDS_ONLY')==='1')throw new RuntimeException('Не задан параметр '.$key.' для установки только по паролям.');
+ return ask($label,$default);
 }
 function put_private(string $path,string $content):void{$tmp=$path.'.new';if(file_put_contents($tmp,$content,LOCK_EX)===false)throw new RuntimeException('Не удалось записать '.$path);chmod($tmp,0600);if(!rename($tmp,$path))throw new RuntimeException('Не удалось сохранить '.$path);}
 function copy_tree(string $src,string $dst):void{if(!is_dir($dst))mkdir($dst,0755,true);foreach(array_diff(scandir($src),['.','..']) as $name){$from=$src.'/'.$name;$to=$dst.'/'.$name;if(is_dir($from)&&!is_link($from))copy_tree($from,$to);else{if(!copy($from,$to))throw new RuntimeException('Не удалось сохранить каталог проверки сертификата.');}}}
@@ -28,7 +33,7 @@ try{
  else{
   if(is_file($configFile))throw new RuntimeException('Настройки уже существуют. Для обновления используйте --update.');
   out('Установка Pina.market. Секреты не передаются в аргументах команд и не попадают в Git.');
-  $url=rtrim(getenv('PINA_BASE_URL')?:ask('HTTPS-адрес сайта','https://pina.market'),'/');if(!preg_match('~^https://[a-zA-Z0-9.-]+$~D',$url))throw new RuntimeException('Нужен HTTPS-домен без пути.');
+  $url=rtrim(setting('PINA_BASE_URL','HTTPS-адрес сайта','https://pina.market'),'/');if(!preg_match('~^https://[a-zA-Z0-9.-]+$~D',$url))throw new RuntimeException('Нужен HTTPS-домен без пути.');
   $host=parse_url($url,PHP_URL_HOST);$home=rtrim((string)getenv('HOME'),'/');$candidates=[];
   foreach([$home.'/www',$home.'/data/www',$home.'/public_html',$home.'/htdocs'] as $parent){
    if(!is_dir($parent))continue;
@@ -50,21 +55,22 @@ try{
    out('Нужен полный путь от корня сервера, например '.$home.'/www/'.$host.'. /www и '.$home.'/www — разные каталоги. Попробуйте снова.');
   }
   $public=realpath($public);if(str_starts_with($root.'/', $public.'/')||str_starts_with($public.'/', $root.'/app/'))throw new RuntimeException('Исходный код и приватная папка должны находиться за пределами каталога сайта.');
-  $db=['host'=>ask('Хост MySQL из панели','localhost'),'port'=>(int)ask('Порт MySQL','3306'),'name'=>ask('Полное имя базы с префиксом хостинга'),'user'=>ask('Пользователь MySQL'),'password'=>ask('Пароль MySQL','',true)];
-  if(!preg_match('/^[a-zA-Z0-9.-]+$/D',$db['host'])||!preg_match('/^[a-zA-Z0-9_-]+$/D',$db['name']))throw new RuntimeException('Проверьте хост и имя базы.');
-  $smtp=['host'=>ask('Сервер SMTP'),'port'=>(int)ask('Порт SMTP','465'),'security'=>ask('Шифрование SMTP: ssl для 465, tls для 587','ssl'),'user'=>ask('Логин SMTP'),'password'=>ask('Пароль SMTP','',true),'from'=>ask('Адрес отправителя','mail@pina.market'),'from_name'=>'Pina.market'];
+  $db=['host'=>setting('PINA_DB_HOST','Хост MySQL из панели','localhost'),'port'=>(int)setting('PINA_DB_PORT','Порт MySQL','3306'),'name'=>setting('PINA_DB_NAME','Полное имя базы с префиксом хостинга'),'user'=>setting('PINA_DB_USER','Пользователь MySQL'),'password'=>ask('Пароль MySQL','',true)];
+  if(!preg_match('/^[a-zA-Z0-9.-]+$/D',$db['host'])||!preg_match('/^[a-zA-Z0-9_-]+$/D',$db['name'])||$db['user']===''||$db['port']<1||$db['port']>65535)throw new RuntimeException('Проверьте хост и имя базы.');
+  $smtp=['host'=>setting('PINA_SMTP_HOST','Сервер SMTP'),'port'=>(int)setting('PINA_SMTP_PORT','Порт SMTP','465'),'security'=>strtolower(setting('PINA_SMTP_SECURITY','Шифрование SMTP: ssl для 465, tls для 587','ssl')),'user'=>setting('PINA_SMTP_USER','Логин SMTP'),'password'=>ask('Пароль SMTP','',true),'from'=>setting('PINA_SMTP_FROM','Адрес отправителя','mail@pina.market'),'from_name'=>'Pina.market'];
   if(!preg_match('/^[a-zA-Z0-9.-]+$/D',$smtp['host'])||!filter_var($smtp['from'],FILTER_VALIDATE_EMAIL)||!in_array($smtp['security'],['ssl','tls'],true)||!in_array($smtp['port'],[465,587],true)||$smtp['user']===''||$smtp['password']==='')throw new RuntimeException('Проверьте настройки защищённого SMTP.');
-  $admin=strtolower(ask('Email администратора'));if(!filter_var($admin,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Некорректный email администратора.');
+  $admin=strtolower(setting('PINA_ADMIN_EMAIL','Email администратора'));out('Email администратора: '.$admin);if(!filter_var($admin,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Некорректный email администратора.');
   $password=ask('Пароль администратора от 12 символов','',true);if(strlen($password)<12||strlen($password)>200||ctype_digit($password))throw new RuntimeException('Пароль должен содержать от 12 до 200 символов и не состоять только из цифр.');
   if($password!==ask('Повторите пароль администратора','',true))throw new RuntimeException('Пароли не совпадают.');
-  $address=ask('Подтверждённый банком адрес кассы и часы работы (Enter — внесение отключено)');
+  $address=setting('PINA_CASH_ADDRESS','Подтверждённый банком адрес кассы и часы работы (Enter — внесение отключено)');
+  if($address==='')out('Внесение наличных отключено. Адрес кассы можно настроить после установки в админке.');
   $config=['base_url'=>$url,'public_dir'=>$public,'db'=>$db,'smtp'=>$smtp,'cash_address'=>$address,'cash_enabled'=>$address!=='','max_amount_minor'=>100000000,'debug'=>false];
  }
  $public=$config['public_dir'];if(!is_dir($public)||!is_writable($public))throw new RuntimeException('Каталог сайта недоступен.');
  $initialPublish=!is_file($public.'/.pina-installed');
  if($initialPublish&&count(array_diff(scandir($public),['.','..','.well-known']))>0){
   out('В выбранном каталоге уже есть сайт. Перед заменой создаётся полный архив файлов.');
-  if(ask('Для замены выбранного сайта введите ЗАМЕНИТЬ')!=='ЗАМЕНИТЬ')throw new RuntimeException('Установка остановлена без замены сайта.');
+  if(getenv('PINA_REPLACE_SITE')!=='1'&&ask('Для замены выбранного сайта введите ЗАМЕНИТЬ')!=='ЗАМЕНИТЬ')throw new RuntimeException('Установка остановлена без замены сайта.');
  }
  $backups=dirname($root).'/pinamarket-backups';if(!is_dir($backups))mkdir($backups,0700,true);chmod($backups,0700);
  // No private path or backup directory is published into the document root.
