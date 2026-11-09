@@ -1,0 +1,10 @@
+.env
+app/config.php
+app/*.lock
+app/config.php.new
+release/
+backups/
+node_modules/
+__pycache__/
+*.pyc
+*.log
