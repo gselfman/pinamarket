@@ -4,6 +4,8 @@ cert,key=sys.argv[1:3]
 ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.load_cert_chain(cert,key)
 class Proxy(http.server.BaseHTTPRequestHandler):
  def handle_request(self):
+  if self.path.startswith('/unsafe-redirect'):
+   self.send_response(302);self.send_header('Location','http://pina.install.test/');self.send_header('Content-Length','0');self.end_headers();return
   size=int(self.headers.get('Content-Length','0'));body=self.rfile.read(size) if size else None
   c=http.client.HTTPConnection('127.0.0.1',8082,timeout=20);c.request(self.command,self.path,body,dict(self.headers));r=c.getresponse();data=r.read()
   self.send_response(r.status)

@@ -47,8 +47,10 @@ active_app="$(php -r 'echo require $argv[1];' "$PINA_INSTALL_TEMP/htdocs/pina-pa
 active_hash="$(sha256sum "$active_app/api.php" | cut -d' ' -f1)"
 printf '\n// Source update smoke check\n' >> "$PINA_INSTALL_TEMP/code/app/api.php"
 [[ "$(sha256sum "$active_app/api.php" | cut -d' ' -f1)" == "$active_hash" ]]
-bash "$PINA_INSTALL_TEMP/code/deploy/install.sh" --update
-php "$PINA_INSTALL_TEMP/code/deploy/verify.php" https://pina.install.test
+php -d allow_url_fopen=0 "$PINA_INSTALL_TEMP/code/deploy/setup.php" --update
+php -d allow_url_fopen=0 "$PINA_INSTALL_TEMP/code/deploy/verify.php" https://pina.install.test
+php -r 'putenv("PATH=/nonexistent-pina-test-bin");require $argv[1];verify_site("https://pina.install.test");echo "PASS: PHP HTTPS fallback follows canonical and legacy redirects without curl\n";' "$PINA_INSTALL_TEMP/code/deploy/verify.php"
+php -r 'require $argv[1];$r=deployment_http_get("https://127.0.0.1/");if($r["status"]!==0||$r["error"]==="")exit(1);$r=deployment_http_get("https://pina.install.test/unsafe-redirect");if($r["status"]!==0||!str_contains($r["error"],"HTTPS запрещено"))exit(1);echo "PASS: wrong certificate name and HTTP downgrade rejected by both transports\n";' "$PINA_INSTALL_TEMP/code/deploy/verify.php"
 next_app="$(php -r 'echo require $argv[1];' "$PINA_INSTALL_TEMP/htdocs/pina-path.php")"
 [[ "$next_app" != "$active_app" ]]
 [[ "$(sha256sum "$active_app/api.php" | cut -d' ' -f1)" == "$active_hash" ]]
@@ -59,4 +61,5 @@ if bash "$PINA_INSTALL_TEMP/code/deploy/install.sh" --update; then echo 'Expecte
 [[ "$(php -r 'echo require $argv[1];' "$PINA_INSTALL_TEMP/htdocs/pina-path.php")" == "$next_app" ]]
 cp "$PINA_INSTALL_TEMP/original-config.php" "$PINA_INSTALL_TEMP/code/app/config.php"
 curl --noproxy '*' --silent --fail https://pina.install.test/api/health/ | grep -q '\"status\":\"ok\"'
+php -r 'require $argv[1];$r=deployment_http_get("https://unavailable.pina.invalid/");if($r["status"]!==0||!str_contains($r["error"],"curl (код ")||!str_contains($r["error"],"PHP HTTPS:"))exit(1);echo "PASS: both HTTPS transport errors retain diagnostic detail\n";' "$PINA_INSTALL_TEMP/code/deploy/verify.php"
 echo 'PASS: clean CLI installation, verified TLS/SMTP, legacy-site replacement, SSL-token preservation repeat update and rollback after failed HTTPS check'
