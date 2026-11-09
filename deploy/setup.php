@@ -1,12 +1,15 @@
 <?php
 declare(strict_types=1);
 if(PHP_SAPI!=='cli'){http_response_code(404);exit;}
+// Installer always uses its own configuration, never a CLI test override.
+putenv('PINA_CONFIG');
 $root=dirname(__DIR__);
 function out(string $s):void{fwrite(STDOUT,$s."\n");}
 function ask(string $label,string $default='',bool $secret=false):string{
+ static $isTTY=null;if($isTTY===null)$isTTY=function_exists('stream_isatty')&&stream_isatty(STDIN);
  fwrite(STDOUT,$label.($default!==''?' ['.$default.']':'').': ');
  $settings=null;
- if($secret&&function_exists('stream_isatty')&&stream_isatty(STDIN)&&function_exists('shell_exec')){$settings=trim((string)shell_exec('stty -g'));if($settings!=='')shell_exec('stty -echo');}
+ if($secret&&$isTTY&&function_exists('shell_exec')){$settings=trim((string)shell_exec('stty -g'));if($settings!=='')shell_exec('stty -echo');}
  try{$v=fgets(STDIN);if($v===false)throw new RuntimeException('Ввод прерван. Запустите скрипт в интерактивном терминале.');}
  finally{if($settings!==null&&$settings!==''){shell_exec('stty '.escapeshellarg($settings));out('');}}
  $v=rtrim($v,"\r\n");return $v!==''?$v:$default;
