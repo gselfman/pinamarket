@@ -52,7 +52,7 @@ try{
  $backups=dirname($root).'/pinamarket-backups';if(!is_dir($backups))mkdir($backups,0700,true);chmod($backups,0700);
  // No private path or backup directory is published into the document root.
  if(str_starts_with(realpath($backups).'/',realpath($public).'/'))throw new RuntimeException('Каталог резервных копий должен быть вне сайта.');
- $stamp=gmdate('Ymd-His');$backup=$backups.'/files-'.$stamp.'.tar.gz';
+ $stamp=gmdate('Ymd-His').'-'.bin2hex(random_bytes(3));$backup=$backups.'/files-'.$stamp.'.tar.gz';
  if(count(array_diff(scandir($public),['.','..']))>0){$command='tar -czf '.escapeshellarg($backup).' -C '.escapeshellarg($public).' .';passthru($command,$code);if($code!==0)throw new RuntimeException('Резервная копия файлов не создана; замена остановлена.');chmod($backup,0600);out('Резервная копия файлов: '.$backup);}
  $b=$config['db'];$pdo=new PDO('mysql:host='.$b['host'].';port='.$b['port'].';dbname='.$b['name'].';charset=utf8mb4',$b['user'],$b['password'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_EMULATE_PREPARES=>false]);
  $pdo->exec("SET time_zone='+00:00'");$pdo->query('SELECT 1')->fetchColumn();
@@ -79,14 +79,19 @@ try{
   out('MySQL подключён. SMTP принял письмо. Администратор создан.');
  }
  // Initial publication replaces the old application as a directory, retaining it for rollback.
+ $oldAppPath=(!$initialPublish&&is_file($public.'/pina-path.php'))?require $public.'/pina-path.php':null;
  $publishDir=$public;
  if($initialPublish){$publishDir=dirname($public).'/.pinamarket-stage-'.$stamp;if(!mkdir($publishDir,0755))throw new RuntimeException('Не удалось создать временный каталог рядом с сайтом.');if(is_dir($public.'/.well-known'))copy_tree($public.'/.well-known',$publishDir.'/.well-known');}
  $html=file_get_contents($root.'/dist/index.html');$tag=substr(hash('sha256',file_get_contents($root.'/dist/app.js').file_get_contents($root.'/dist/legal.js').file_get_contents($root.'/dist/style.css')),0,12);
  foreach(['app.js','legal.js','style.css'] as $asset)$html=str_replace('/'.$asset,'/'.$asset.'?v='.$tag,$html);
- put_private($root.'/app/template.html',$html);
+ // Keep running PHP code immutable while Git updates the source checkout.
+ $releaseApp=$root.'/var/releases/'.$stamp.'/app';if(!mkdir($releaseApp,0700,true))throw new RuntimeException('Не удалось создать приватную версию приложения.');
+ foreach(scandir($root.'/app') as $name){if(in_array($name,['.','..','config.php','config.php.new','template.html'],true)||str_ends_with($name,'.lock'))continue;$from=$root.'/app/'.$name;if(is_file($from))copy_file($from,$releaseApp.'/'.$name,0600);}
+ put_private($releaseApp.'/config.php',"<?php\nreturn ".var_export($config,true).";\n");
+ put_private($releaseApp.'/template.html',$html);
  foreach(['app.js','legal.js','style.css','pina-logo.png'] as $asset)copy_file($root.'/dist/'.$asset,$publishDir.'/'.$asset);
  foreach(['.htaccess','.user.ini'] as $asset)copy_file($root.'/public/'.$asset,$publishDir.'/'.$asset);
- put_private($publishDir.'/pina-path.php',"<?php\nreturn ".var_export($root.'/app',true).";\n");
+ put_private($publishDir.'/pina-path.php',"<?php\nreturn ".var_export($releaseApp,true).";\n");
  copy_file($root.'/public/index.php',$publishDir.'/index.php');
  file_put_contents($publishDir.'/.pina-installed',gmdate('c'));chmod($publishDir.'/.pina-installed',0600);
  if($initialPublish){$previous=dirname($public).'/.pinamarket-previous-'.$stamp;if(!rename($public,$previous))throw new RuntimeException('Не удалось сохранить прежний каталог сайта. Новые файлы оставлены в '.$publishDir);if(!rename($publishDir,$public)){rename($previous,$public);throw new RuntimeException('Переключение не удалось; прежний каталог восстановлен.');}out('Предыдущий каталог сохранён: '.$previous);}
@@ -94,7 +99,11 @@ try{
  out('Проверка HTTPS и серверного приложения:');
  $ctx=stream_context_create(['http'=>['timeout'=>15,'ignore_errors'=>true],'ssl'=>['verify_peer'=>true,'verify_peer_name'=>true]]);
  $response=@file_get_contents($config['base_url'].'/api/health/',false,$ctx);$health=json_decode($response?:'',true);
- if(($health['status']??'')!=='ok')throw new RuntimeException('Файлы установлены, но HTTPS-проверка не прошла. Проверьте SSL, путь каталога и обработку .htaccess; настройки и база сохранены. После исправления выполните --update.');
+ if(($health['status']??'')!=='ok'){
+  if($initialPublish&&isset($previous)&&is_dir($previous)){$failed=dirname($public).'/.pinamarket-failed-'.$stamp;if(rename($public,$failed)&&rename($previous,$public))throw new RuntimeException('HTTPS-проверка не прошла. Прежний сайт восстановлен. Проверьте SSL, DNS и путь каталога, затем повторите с --update. Настройки и база сохранены.');}
+  if(!$initialPublish&&$oldAppPath){put_private($public.'/pina-path.php',"<?php\nreturn ".var_export($oldAppPath,true).";\n");$restore='tar -xzf '.escapeshellarg($backup).' -C '.escapeshellarg($public).' ./app.js ./legal.js ./style.css ./pina-logo.png ./index.php ./.htaccess ./.user.ini';passthru($restore,$restoreCode);if($restoreCode!==0)throw new RuntimeException('HTTPS-проверка не прошла. Прежний backend включён, но файлы нужно восстановить из архива '.$backup);throw new RuntimeException('HTTPS-проверка не прошла. Прежняя версия приложения восстановлена; проверьте SSL и DNS, затем повторите обновление.');}
+  throw new RuntimeException('HTTPS-проверка не прошла. Проверьте настройки домена; настройки и база сохранены.');
+ }
  out('Сайт отвечает, база подключена. Войдите в админку и задайте реальные условия сервисов.');
  out('Если был создан архив файлов, храните его вне сайта. Сервисы включаются после заполнения условий и регионов.');
 }catch(Throwable $e){fwrite(STDERR,'Ошибка: '.($e instanceof PDOException?'Не удалось выполнить операцию MySQL. Проверьте реквизиты базы, права и InnoDB.':$e->getMessage())."\n");exit(1);}
