@@ -12,6 +12,7 @@ function ask(string $label,string $default='',bool $secret=false):string{
  $v=rtrim($v,"\r\n");return $v!==''?$v:$default;
 }
 function put_private(string $path,string $content):void{$tmp=$path.'.new';if(file_put_contents($tmp,$content,LOCK_EX)===false)throw new RuntimeException('Не удалось записать '.$path);chmod($tmp,0600);if(!rename($tmp,$path))throw new RuntimeException('Не удалось сохранить '.$path);}
+function copy_tree(string $src,string $dst):void{if(!is_dir($dst))mkdir($dst,0755,true);foreach(array_diff(scandir($src),['.','..']) as $name){$from=$src.'/'.$name;$to=$dst.'/'.$name;if(is_dir($from)&&!is_link($from))copy_tree($from,$to);else{if(!copy($from,$to))throw new RuntimeException('Не удалось сохранить каталог проверки сертификата.');}}}
 function copy_file(string $src,string $dst,int $mode=0644):void{$tmp=$dst.'.pina-new';if(!copy($src,$tmp))throw new RuntimeException('Не удалось скопировать '.$dst);chmod($tmp,$mode);if(!rename($tmp,$dst))throw new RuntimeException('Не удалось заменить '.$dst);}
 try{
  if(PHP_VERSION_ID<80200)throw new RuntimeException('Нужен PHP 8.2 или новее.');
@@ -40,7 +41,8 @@ try{
   $config=['base_url'=>$url,'public_dir'=>$public,'db'=>$db,'smtp'=>$smtp,'cash_address'=>$address,'cash_enabled'=>$address!=='','max_amount_minor'=>100000000,'debug'=>false];
  }
  $public=$config['public_dir'];if(!is_dir($public)||!is_writable($public))throw new RuntimeException('Каталог сайта недоступен.');
- if(!$update&&file_exists($public.'/index.php')&&!file_exists($public.'/.pina-installed')||!$update&&file_exists($public.'/index.html')&&!file_exists($public.'/.pina-installed')){
+ $initialPublish=!is_file($public.'/.pina-installed');
+ if($initialPublish&&count(array_diff(scandir($public),['.','..','.well-known']))>0){
   out('В выбранном каталоге уже есть сайт. Перед заменой создаётся полный архив файлов.');
   if(ask('Для замены выбранного сайта введите ЗАМЕНИТЬ')!=='ЗАМЕНИТЬ')throw new RuntimeException('Установка остановлена без замены сайта.');
  }
@@ -54,6 +56,7 @@ try{
  if(!$update){$existing=$pdo->query("SHOW TABLES LIKE 'pm_clients'")->fetchColumn();if($existing&&$pdo->query('SELECT COUNT(*) FROM pm_clients')->fetchColumn()>0)throw new RuntimeException('База уже содержит клиентов. Используйте другую пустую базу.');}
  // SQL is committed in the repository; no remote shell installers or package managers run here.
  foreach(explode(';',file_get_contents($root.'/database/schema.sql')) as $sql)if(trim($sql)!=='')$pdo->exec($sql);
+ $metaType=$pdo->query("SHOW COLUMNS FROM pm_meta LIKE 'value'")->fetch(PDO::FETCH_ASSOC);if(str_starts_with(strtolower($metaType['Type']),'varchar'))$pdo->exec('ALTER TABLE pm_meta MODIFY value TEXT NOT NULL');
  $version=$pdo->query("SELECT value FROM pm_meta WHERE name='schema_version'")->fetchColumn();if($version&&$version!=='1')throw new RuntimeException('Неподдерживаемая версия базы; требуется отдельная миграция.');
  if(!$update){
   put_private($configFile,"<?php\nreturn ".var_export($config,true).";\n");
@@ -72,15 +75,18 @@ try{
   }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();unlink($configFile);throw $e;}
   out('MySQL подключён. SMTP принял письмо. Администратор создан.');
  }
+ // Initial publication replaces the old application as a directory, retaining it for rollback.
+ $publishDir=$public;
+ if($initialPublish){$publishDir=dirname($public).'/.pinamarket-stage-'.$stamp;if(!mkdir($publishDir,0755))throw new RuntimeException('Не удалось создать временный каталог рядом с сайтом.');if(is_dir($public.'/.well-known'))copy_tree($public.'/.well-known',$publishDir.'/.well-known');}
  $html=file_get_contents($root.'/dist/index.html');$tag=substr(hash('sha256',file_get_contents($root.'/dist/app.js').file_get_contents($root.'/dist/legal.js').file_get_contents($root.'/dist/style.css')),0,12);
  foreach(['app.js','legal.js','style.css'] as $asset)$html=str_replace('/'.$asset,'/'.$asset.'?v='.$tag,$html);
  put_private($root.'/app/template.html',$html);
- foreach(['app.js','legal.js','style.css','pina-logo.png'] as $asset)copy_file($root.'/dist/'.$asset,$public.'/'.$asset);
- foreach(['.htaccess','.user.ini'] as $asset)copy_file($root.'/public/'.$asset,$public.'/'.$asset);
- put_private($public.'/pina-path.php',"<?php\nreturn ".var_export($root.'/app',true).";\n");
- if(is_file($public.'/index.html'))rename($public.'/index.html',$backups.'/previous-index-'.$stamp.'.html');
- copy_file($root.'/public/index.php',$public.'/index.php');
- file_put_contents($public.'/.pina-installed',gmdate('c'));chmod($public.'/.pina-installed',0600);
+ foreach(['app.js','legal.js','style.css','pina-logo.png'] as $asset)copy_file($root.'/dist/'.$asset,$publishDir.'/'.$asset);
+ foreach(['.htaccess','.user.ini'] as $asset)copy_file($root.'/public/'.$asset,$publishDir.'/'.$asset);
+ put_private($publishDir.'/pina-path.php',"<?php\nreturn ".var_export($root.'/app',true).";\n");
+ copy_file($root.'/public/index.php',$publishDir.'/index.php');
+ file_put_contents($publishDir.'/.pina-installed',gmdate('c'));chmod($publishDir.'/.pina-installed',0600);
+ if($initialPublish){$previous=dirname($public).'/.pinamarket-previous-'.$stamp;if(!rename($public,$previous))throw new RuntimeException('Не удалось сохранить прежний каталог сайта. Новые файлы оставлены в '.$publishDir);if(!rename($publishDir,$public)){rename($previous,$public);throw new RuntimeException('Переключение не удалось; прежний каталог восстановлен.');}out('Предыдущий каталог сохранён: '.$previous);}
  out('Файлы установлены. Админка: '.$config['base_url'].'/admin/');
  out('Проверка HTTPS и серверного приложения:');
  $ctx=stream_context_create(['http'=>['timeout'=>15,'ignore_errors'=>true],'ssl'=>['verify_peer'=>true,'verify_peer_name'=>true]]);

@@ -3,7 +3,7 @@ declare(strict_types=1);
 $appDir=is_file(__DIR__.'/pina-path.php')?require __DIR__.'/pina-path.php':dirname(__DIR__).'/app';
 if(is_file($appDir.'/config.php')){
  $config=require $appDir.'/config.php';
- if(!($config['debug']??false)&&($_SERVER['HTTPS']??'')!=='on'){http_response_code(400);exit('Используйте HTTPS-адрес сайта.');}
+ if(!($config['debug']??false)&&!in_array($_SERVER['HTTPS']??'',['on','1'],true)){http_response_code(400);exit('Используйте HTTPS-адрес сайта.');}
 }
 $path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);
 if(str_starts_with($path,'/api/')){require $appDir.'/api.php';exit;}

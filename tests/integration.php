@@ -10,6 +10,7 @@ $schema=file_get_contents(dirname(__DIR__).'/database/schema.sql');foreach(explo
 $schemaTables=['pm_consents','pm_password_resets','pm_rate_buckets','pm_audit','pm_messages','pm_ledger','pm_operations','pm_services','pm_clients','pm_counters','pm_meta'];
 foreach($schemaTables as $t)query('DELETE FROM '.$t);query("INSERT INTO pm_counters(name,value) VALUES('client',0),('operation',0)");
 query("INSERT INTO pm_meta(name,value) VALUES('site_settings',?)",[json_encode(['cashEnabled'=>true,'cashAddress'=>'Test desk'])]);
+session_init();
 $_SESSION=['csrf'=>str_repeat('a',64)];$_SERVER['HTTP_X_CSRFTOKEN']=$_SESSION['csrf'];$_SERVER['REMOTE_ADDR']='127.0.0.1';
 $n=0;
 function expect(bool $ok,string $label):void{global $n;$n++;if(!$ok)throw new RuntimeException('FAILED: '.$label);}
@@ -17,8 +18,9 @@ function as_client(int $id):void{$_SESSION['client']=$id;$_SESSION['auth_version
 function fail_api(callable $f,int $code,string $label):void{try{$f();throw new RuntimeException('Expected error: '.$label);}catch(ApiError $e){expect($e->status===$code,$label);}}
 // The routes are called directly; POST JSON is supplied through a test-only override below.
 function payload(array $d):void{$GLOBALS['test_input']=$d;}
-function post(string $route,array $data):mixed{if($route==='orders/')$data+=['accepted'=>true,'legalVersion'=>legal_data()['version']];if($route==='register/')$data+=['accepted'=>true,'version'=>legal_data()['version']];payload($data);return api_route($route,'POST');}
+function post(string $route,array $data):mixed{if($route==='orders/')$data+=['accepted'=>true,'legalVersion'=>legal_data()['version']];if($route==='register/')$data+=['accepted'=>true,'version'=>legal_data()['version']];payload($data);$r=api_route($route,'POST');if($route==='login/'&&isset($r['csrf']))$_SERVER['HTTP_X_CSRFTOKEN']=$r['csrf'];return $r;}
 $r=post('register/',['email'=>'client1@example.com']);expect(count($GLOBALS['outbox'])===1,'registration sends email');$mail=$GLOBALS['outbox'][0]['body'];expect(str_contains($mail,'/login/'),'mail includes login page');preg_match('/Временный пароль: ([a-f0-9]+)/u',$mail,$m);expect(password_verify($m[1],one('SELECT password_hash FROM pm_clients WHERE id=1000')['password_hash']),'only hash stored');
+$access=post('login/',['email'=>'client1@example.com','password'=>$m[1]]);expect($access['prompt']===true,'first login offers password setup');expect(one('SELECT temporary_until FROM pm_clients WHERE id=1000')['temporary_until']===null,'temporary password activated on first login');
 post('register/',['email'=>'client2@example.com']);post('register/',['email'=>'client3@example.com']);expect(array_column(rows('SELECT id FROM pm_clients ORDER BY id'),'id')==[1000,1001,1014],'ID sequence');
 post('register/',['email'=>'client1@example.com']);expect(count($GLOBALS['outbox'])===3,'existing email does not reset credentials');
 query('UPDATE pm_clients SET is_staff=1,password_prompt=0 WHERE id=1014');

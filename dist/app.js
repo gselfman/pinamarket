@@ -212,7 +212,7 @@ function renderCabinet() {
             return `<div class="subhead"><div class="filter">${[ "Все", "Игры", "Приложения", "Подписки" ].map(f => `<button class="chip ${filter === f ? "active" : ""}" data-action="category" data-id="${f}">${f}</button>`).join("")}</div><input class="search" id="search" value="${esc(query)}" placeholder="Найти сервис" aria-label="Найти сервис"></div><div class="catalog" id="catalog-results">${filtered()}</div>`;
 
           case "account":
-            return `<div class="two-col"><div class="panel"><h2 style="font-size:17px;margin-top:0">Пополнение баланса</h2><form id="cash-form" class="fields"><div class="field"><label for="cash-amount">Сумма, ₽</label><input id="cash-amount" name="amount" type="number" step="0.01" min="1" max="1000000" required placeholder="5 000"></div><div class="field"><label for="cash-method">Способ пополнения</label><select id="cash-method"><option>Наличными в кассе</option></select></div><div class="notice">Заявка получает номер. Деньги появятся на балансе после проверки поступления администратором.</div><button class="btn full" ${cashEnabled?'':'disabled'}>Получить реквизиты ↗</button>${cashEnabled?'':'<div class="notice">Внесение наличных временно недоступно. Напишите в поддержку.</div>'}</form></div><div class="panel"><div class="eyebrow">Порядок зачисления</div><h2 style="font-size:23px">Заявка → касса → баланс</h2><div class="help-card">1. Получите реквизиты и номер операции.<br>2. Внесите наличные по реквизитам заявки.<br>3. Администратор проверит поступление и зачислит сумму.</div><div class="notice warn">${esc(cashAddress)}</div><button class="textbtn" data-action="doc" data-id="requisites">Реквизиты получателя →</button></div></div>`;
+            return `<div class="two-col"><div class="panel"><h2 style="font-size:17px;margin-top:0">Пополнение баланса</h2><form id="cash-form" class="fields"><div class="field"><label for="cash-amount">Сумма, ₽</label><input id="cash-amount" name="amount" type="number" step="0.01" min="1" max="1000000" required placeholder="5 000"></div><div class="field"><label for="cash-method">Способ пополнения</label><select id="cash-method"><option>Наличными в кассе</option></select></div><div class="notice">Заявка получает номер. Деньги появятся на балансе после проверки поступления администратором.</div><button class="btn full" ${cashEnabled?'':'disabled'}>Получить реквизиты ↗</button>${cashEnabled?'':'<div class="notice">Внесение наличных временно недоступно. Напишите в поддержку.</div>'}</form></div><div class="panel"><div class="eyebrow">Порядок зачисления</div><h2 style="font-size:23px">Заявка → касса → баланс</h2><div class="help-card">1. Получите реквизиты и номер операции.<br>2. Внесите наличные по реквизитам заявки.<br>3. Администратор проверит поступление и зачислит сумму.</div><div class="notice warn">${esc(cashAddress||"Адрес кассы появится после включения способа внесения.")}</div><button class="textbtn" data-action="doc" data-id="requisites">Реквизиты получателя →</button></div></div>`;
 
           case "balance":
           case "operations":
@@ -337,7 +337,7 @@ async function refresh() {
 
 async function go(v) {
     await sync();
-    view = v, filter = "Все", query = "", currentPage = 1, listFilters = {}, closeModal(), 
+    view = v, history.replaceState(null,"",v==="admin"?"/admin/":"/cabinet/"), filter = "Все", query = "", currentPage = 1, listFilters = {}, closeModal(), 
     render(), await loadList(), window.scrollTo(0, 0);
 }
 
@@ -541,7 +541,7 @@ document.addEventListener("click", e => {
                 }
                 await async function(email) {
                     if (sessionEmail = email, signed = !0, await sync(), view = location.pathname.startsWith("/admin") && staff ? "admin" : "overview", 
-                    closeModal(), render(), "admin" === view && await loadList(), firstPrompt) passwordDialog(!0); else if (selected) {
+                    closeModal(), history.replaceState(null,"",view==="admin"?"/admin/":"/cabinet/"), render(), "admin" === view && await loadList(), firstPrompt) passwordDialog(!0); else if (selected) {
                         const id = selected;
                         selected = "", openService(id);
                     }
