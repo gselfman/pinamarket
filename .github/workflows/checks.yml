@@ -73,3 +73,9 @@ jobs:
             sleep 1
           done
           node tests/ui.mjs
+
+      - name: Verify fresh shared-hosting installation and repeat update
+        run: bash tests/install.sh
+        env:
+          PINA_CONFIG: ${{ runner.temp }}/pina-test.php
+          DB_NAME: pina_test
