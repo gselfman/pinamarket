@@ -9,6 +9,10 @@ header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');header('X-Frame-Options: DENY');header('Referrer-Policy: strict-origin-when-cross-origin');header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
 $path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH)?:'/';
 if(str_starts_with($path,'/api/')){require $appDir.'/api.php';exit;}
+// Keep previously published document links usable after replacing the old storefront.
+$legacy=['/privacy'=>'/documents/privacy/','/publichnaya-oferta'=>'/documents/terms/','/offer'=>'/documents/terms/'];
+if(isset($legacy[rtrim($path,'/')])){header('Location: '.$legacy[rtrim($path,'/')],true,301);exit;}
+
 // Canonical URLs work both with and without a trailing slash; preserve reset tokens.
 if(preg_match('~^/(?:admin|login|register|cabinet|reset|documents(?:/[a-z]+)?)$~D',$path)){
  $query=parse_url($_SERVER['REQUEST_URI'],PHP_URL_QUERY);

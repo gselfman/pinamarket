@@ -5,7 +5,7 @@ trap 'if [[ -f "$PINA_APACHE_TEMP/apache.pid" ]]; then sudo kill "$(cat "$PINA_A
 cp -R app public "$PINA_APACHE_TEMP/"
 chmod -R a+rX "$PINA_APACHE_TEMP"
 # Old hosting directories must not shadow application routes.
-mkdir -p "$PINA_APACHE_TEMP/public/register" "$PINA_APACHE_TEMP/public/login" "$PINA_APACHE_TEMP/public/documents/terms" "$PINA_APACHE_TEMP/public/api/health"
+mkdir -p "$PINA_APACHE_TEMP/public/register" "$PINA_APACHE_TEMP/public/login" "$PINA_APACHE_TEMP/public/documents/terms" "$PINA_APACHE_TEMP/public/api/health" "$PINA_APACHE_TEMP/public/privacy" "$PINA_APACHE_TEMP/public/publichnaya-oferta"
 printf 'LEGACY PAGE' > "$PINA_APACHE_TEMP/public/register/index.html"
 cat > "$PINA_APACHE_TEMP/apache.conf" <<CONF
 ServerRoot /etc/apache2

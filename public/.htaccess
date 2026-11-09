@@ -7,7 +7,7 @@ RewriteEngine On
 # The document root must be this public directory, never the parent project folder.
 RewriteRule ^(?:app|database|deploy|tests|docs)(?:/|$) - [F,L]
 # Application routes take priority over stale physical folders.
-RewriteRule ^(?:api|admin|login|register|cabinet|reset|documents)(?:/.*)?$ index.php [L]
+RewriteRule ^(?:api|admin|login|register|cabinet|reset|documents|privacy|publichnaya-oferta|offer)(?:/.*)?$ index.php [L]
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]

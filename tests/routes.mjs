@@ -18,3 +18,8 @@ for(const path of ['/missing/','/documents/missing/']){assert.equal((await fetch
 for(const asset of ['app.js','legal.js','style.css','pina-logo.png']){const r=await fetch(base+'/'+asset);assert.equal(r.status,200,asset);assert.ok((await r.arrayBuffer()).byteLength>100,asset+' nonempty');checks++}
 const health=await fetch(base+'/api/health/');assert.equal(health.status,200,'API reachable through web server');assert.equal((await health.json()).status,'ok','database connected through web server');checks++;
 console.log(`PASS: ${checks} public routes, canonical redirects, server HTML, document consistency and assets (${base})`);
+
+for(const [alias,target] of Object.entries({'/privacy':'/documents/privacy/','/publichnaya-oferta':'/documents/terms/','/offer':'/documents/terms/'})){
+ for(const suffix of ['', '/']){const path=alias+suffix;const r=await fetch(base+path,{redirect:'manual'});assert.ok([301,308].includes(r.status),path+' permanent legacy redirect');const page=await fetch(base+path);assert.equal(page.status,200,path+' usable document');assert.equal(page.url,base+target,path+' final canonical URL');assert.ok((await page.text()).includes('Pina Market LLC'),path+' current document');checks++;}
+}
+console.log(`PASS: legacy document links, including both slash forms (${base})`);
