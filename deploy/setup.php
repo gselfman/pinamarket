@@ -105,7 +105,8 @@ try{
   out('MySQL подключён. SMTP принял письмо. Администратор создан.');
  }
  // Initial publication replaces the old application as a directory, retaining it for rollback.
- $oldAppPath=(!$initialPublish&&is_file($public.'/pina-path.php'))?require $public.'/pina-path.php':null;
+ $oldAppPath=null;if(!$initialPublish){if(is_file($public.'/pina-path.json'))$oldAppPath=json_decode(file_get_contents($public.'/pina-path.json'),true)['app']??null;elseif(is_file($public.'/pina-path.php'))$oldAppPath=require $public.'/pina-path.php';}
+ $oldHadJson=is_file($public.'/pina-path.json');
  $publishDir=$public;
  if($initialPublish){$publishDir=dirname($public).'/.pinamarket-stage-'.$stamp;if(!mkdir($publishDir,0755))throw new RuntimeException('Не удалось создать временный каталог рядом с сайтом.');if(is_dir($public.'/.well-known'))copy_tree($public.'/.well-known',$publishDir.'/.well-known');}
  // mkdir modes are restricted by the shell umask (077 in bootstrap). Nginx needs public traversal.
@@ -127,6 +128,7 @@ try{
  }
 
  put_private($publishDir.'/pina-path.php',"<?php\nreturn ".var_export($releaseApp,true).";\n");
+ put_private($publishDir.'/pina-path.json',json_encode(['app'=>$releaseApp],JSON_THROW_ON_ERROR));
  copy_file($root.'/public/index.php',$publishDir.'/index.php');
  file_put_contents($publishDir.'/.pina-installed',gmdate('c'));chmod($publishDir.'/.pina-installed',0600);
  if($initialPublish){$previous=dirname($public).'/.pinamarket-previous-'.$stamp;if(!rename($public,$previous))throw new RuntimeException('Не удалось сохранить прежний каталог сайта. Новые файлы оставлены в '.$publishDir);if(!rename($publishDir,$public)){rename($previous,$public);throw new RuntimeException('Переключение не удалось; прежний каталог восстановлен.');}out('Предыдущий каталог сохранён: '.$previous);}
@@ -137,7 +139,7 @@ try{
  if($verifyError!==null){
   out($verifyError);
   if($initialPublish&&isset($previous)&&is_dir($previous)){$failed=dirname($public).'/.pinamarket-failed-'.$stamp;if(rename($public,$failed)&&rename($previous,$public))throw new RuntimeException('HTTPS-проверка не прошла. Прежний сайт восстановлен. Проверьте SSL, DNS и путь каталога, затем повторите с --update. Настройки и база сохранены.');}
-  if(!$initialPublish&&$oldAppPath){put_private($public.'/pina-path.php',"<?php\nreturn ".var_export($oldAppPath,true).";\n");$restore='tar -xzf '.escapeshellarg($backup).' -C '.escapeshellarg($public).' ./app.js ./legal.js ./style.css ./pina-logo.png ./index.php ./.htaccess ./.user.ini';passthru($restore,$restoreCode);if($restoreCode!==0)throw new RuntimeException('HTTPS-проверка не прошла. Прежний backend включён, но файлы нужно восстановить из архива '.$backup);throw new RuntimeException('HTTPS-проверка не прошла. Прежняя версия приложения восстановлена; проверьте SSL и DNS, затем повторите обновление.');}
+  if(!$initialPublish&&$oldAppPath){put_private($public.'/pina-path.php',"<?php\nreturn ".var_export($oldAppPath,true).";\n");if($oldHadJson)put_private($public.'/pina-path.json',json_encode(['app'=>$oldAppPath],JSON_THROW_ON_ERROR));elseif(is_file($public.'/pina-path.json'))unlink($public.'/pina-path.json');$restore='tar -xzf '.escapeshellarg($backup).' -C '.escapeshellarg($public).' ./app.js ./legal.js ./style.css ./pina-logo.png ./index.php ./.htaccess ./.user.ini';passthru($restore,$restoreCode);if($restoreCode!==0)throw new RuntimeException('HTTPS-проверка не прошла. Прежний backend включён, но файлы нужно восстановить из архива '.$backup);throw new RuntimeException('HTTPS-проверка не прошла. Прежняя версия приложения восстановлена; проверьте SSL и DNS, затем повторите обновление.');}
   throw new RuntimeException('HTTPS-проверка не прошла. Проверьте настройки домена; настройки и база сохранены.');
  }
  if($fcgiWrapper!=='')put_private($configFile,"<?php\nreturn ".var_export($config,true).";\n");

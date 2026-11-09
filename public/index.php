@@ -5,7 +5,12 @@ if(PHP_VERSION_ID<80200||!function_exists('str_starts_with')){
  http_response_code(503);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
  echo json_encode(['error'=>'Для сайта требуется PHP 8.2 или новее с доступными стандартными функциями. Фактический веб-PHP: '.PHP_VERSION.'; обработчик: '.PHP_SAPI],JSON_UNESCAPED_UNICODE);exit;
 }
-$appDir=is_file(__DIR__.'/pina-path.php')?require __DIR__.'/pina-path.php':dirname(__DIR__).'/app';
+// Read the active release as data: OPcache must not retain an older PHP pointer.
+if(is_file(__DIR__.'/pina-path.json')){
+ $pointer=json_decode(file_get_contents(__DIR__.'/pina-path.json'),true);
+ $appDir=$pointer['app']??'';
+ if(!is_string($appDir)||$appDir===''){http_response_code(503);exit('Не удалось прочитать путь приложения.');}
+}else $appDir=is_file(__DIR__.'/pina-path.php')?require __DIR__.'/pina-path.php':dirname(__DIR__).'/app';
 if(is_file($appDir.'/config.php')){
  $config=require $appDir.'/config.php';
  if(!($config['debug']??false)&&!in_array($_SERVER['HTTPS']??'',['on','1'],true)){http_response_code(400);exit('Используйте HTTPS-адрес сайта.');}

@@ -72,6 +72,7 @@ printf '<?php echo PHP_SAPI;' > "$PINA_INSTALL_TEMP/htdocs/runtime-check.php"
 chmod 0644 "$PINA_INSTALL_TEMP/htdocs/runtime-check.php"
 [[ "$(curl --noproxy '*' --silent --fail https://pina.install.test/runtime-check.php)" == 'cgi-fcgi' ]]
 rm "$PINA_INSTALL_TEMP/htdocs/runtime-check.php"
+[[ "$(curl --noproxy '*' --silent -o /dev/null -w '%{http_code}' https://pina.install.test/pina-path.json)" == 403 ]]
 grep -Fq "FCGIWrapper $PINA_FCGI_WRAPPER .php" "$PINA_INSTALL_TEMP/htdocs/.htaccess"
 [[ ! -e "$PINA_INSTALL_TEMP/htdocs/admin" ]]
 [[ "$(cat "$PINA_INSTALL_TEMP/htdocs/.well-known/token.txt")" == 'CERTIFICATE TOKEN' ]]
@@ -91,12 +92,14 @@ php -r 'putenv("PATH=/nonexistent-pina-test-bin");require $argv[1];verify_site("
 php -r 'require $argv[1];$r=deployment_http_get("https://127.0.0.1/");if($r["status"]!==0||$r["error"]==="")exit(1);$r=deployment_http_get("https://pina.install.test/unsafe-redirect");if($r["status"]!==0||!str_contains($r["error"],"HTTPS запрещено"))exit(1);echo "PASS: wrong certificate name and HTTP downgrade rejected by both transports\n";' "$PINA_INSTALL_TEMP/code/deploy/verify.php"
 next_app="$(php -r 'echo require $argv[1];' "$PINA_INSTALL_TEMP/htdocs/pina-path.php")"
 [[ "$next_app" != "$active_app" ]]
+php -r '$p=json_decode(file_get_contents($argv[1]),true);if($p["app"]!==$argv[2])exit(1);' "$PINA_INSTALL_TEMP/htdocs/pina-path.json" "$next_app"
 [[ "$(sha256sum "$active_app/api.php" | cut -d' ' -f1)" == "$active_hash" ]]
 curl --noproxy '*' --silent --fail https://pina.install.test/documents/terms/ | grep -q 'Pina.market'
 cp "$PINA_INSTALL_TEMP/code/app/config.php" "$PINA_INSTALL_TEMP/original-config.php"
 php -r '$f=$argv[1];$c=require $f;$c["base_url"]="https://unavailable.pina.invalid";file_put_contents($f,"<?php return ".var_export($c,true).";");' "$PINA_INSTALL_TEMP/code/app/config.php"
 if bash "$PINA_INSTALL_TEMP/code/deploy/install.sh" --update; then echo 'Expected HTTPS failure' >&2; exit 1; fi
 [[ "$(php -r 'echo require $argv[1];' "$PINA_INSTALL_TEMP/htdocs/pina-path.php")" == "$next_app" ]]
+php -r '$p=json_decode(file_get_contents($argv[1]),true);if($p["app"]!==$argv[2])exit(1);' "$PINA_INSTALL_TEMP/htdocs/pina-path.json" "$next_app"
 cp "$PINA_INSTALL_TEMP/original-config.php" "$PINA_INSTALL_TEMP/code/app/config.php"
 curl --noproxy '*' --silent --fail https://pina.install.test/api/health/ | grep -q '\"status\":\"ok\"'
 php -r 'require $argv[1];$r=deployment_http_get("https://unavailable.pina.invalid/");if($r["status"]!==0||!str_contains($r["error"],"curl (код ")||!str_contains($r["error"],"PHP HTTPS:"))exit(1);echo "PASS: both HTTPS transport errors retain diagnostic detail\n";' "$PINA_INSTALL_TEMP/code/deploy/verify.php"

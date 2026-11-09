@@ -3,6 +3,9 @@ DirectoryIndex index.php
 <FilesMatch "^(\.|.*\.(sql|log|ini|env|bak|zip|tar|gz))">
   Require all denied
 </FilesMatch>
+<FilesMatch "^pina-path\.(php|json)$">
+  Require all denied
+</FilesMatch>
 RewriteEngine On
 # The document root must be this public directory, never the parent project folder.
 RewriteRule ^(?:app|database|deploy|tests|docs)(?:/|$) - [F,L]
