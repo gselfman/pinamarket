@@ -27,6 +27,7 @@ tls_pid=$!
 for attempt in $(seq 1 20); do if curl --noproxy '*' --silent https://pina.install.test/ > /dev/null; then break; fi; sleep 1; done
 bash "$PINA_INSTALL_TEMP/code/deploy/install.sh" <<INPUT
 https://pina.install.test
+/www/pina.market
 $PINA_INSTALL_TEMP/htdocs
 127.0.0.1
 3306
@@ -56,6 +57,7 @@ active_hash="$(sha256sum "$active_app/api.php" | cut -d' ' -f1)"
 printf '\n// Source update smoke check\n' >> "$PINA_INSTALL_TEMP/code/app/api.php"
 [[ "$(sha256sum "$active_app/api.php" | cut -d' ' -f1)" == "$active_hash" ]]
 bash "$PINA_INSTALL_TEMP/code/deploy/install.sh" --update
+php "$PINA_INSTALL_TEMP/code/deploy/verify.php" https://pina.install.test
 next_app="$(php -r 'echo require $argv[1];' "$PINA_INSTALL_TEMP/htdocs/pina-path.php")"
 [[ "$next_app" != "$active_app" ]]
 [[ "$(sha256sum "$active_app/api.php" | cut -d' ' -f1)" == "$active_hash" ]]

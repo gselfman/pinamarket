@@ -7,7 +7,7 @@ function api_route(string $route,string $method):mixed {
  $post=$method==='POST';$get=$method==='GET';$d=$post?input():[];
  if($post)csrf_check();
  if($route==='config/'&&$get)return ['csrf'=>$_SESSION['csrf'],'legalVersion'=>legal_data()['version']]+site_settings();
- if($route==='health/'&&$get){one('SELECT value FROM pm_counters WHERE name=?',['operation']);return ['status'=>'ok'];}
+ if($route==='health/'&&$get){one('SELECT value FROM pm_counters WHERE name=?',['operation']);$release=is_file(__DIR__.'/release.json')?json_decode(file_get_contents(__DIR__.'/release.json'),true):[];return ['status'=>'ok','release'=>$release['id']??'source'];}
  if($route==='register/'&&$post){
   $legal=legal_data();if(($d['accepted']??false)!==true||($d['version']??'')!==$legal['version'])throw new ApiError('Ознакомьтесь с актуальными условиями и подтвердите согласие');$email=strtolower(txt($d,'email',254));if(!filter_var($email,FILTER_VALIDATE_EMAIL))throw new ApiError('Проверьте email');throttle('register',$email,5);
   $generic=['message'=>'Если адрес ещё не зарегистрирован, на него отправлены временный пароль и ссылка на вход.'];

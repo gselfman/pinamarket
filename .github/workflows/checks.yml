@@ -4,7 +4,7 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       mysql:
         image: mysql:8.0
@@ -24,6 +24,7 @@ jobs:
           coverage: none
       - run: find app public deploy tests -name '*.php' -print0 | xargs -0 -n1 php -l
       - run: node --check dist/app.js
+      - run: bash -n deploy/diagnose.sh
       - run: node tests/static.mjs
       - run: bash -n deploy/install.sh && bash -n deploy/bootstrap.sh
       - run: bash deploy/install.sh --check
@@ -50,6 +51,7 @@ jobs:
             if curl --silent --fail http://127.0.0.1:8081/api/health/ > /dev/null; then break; fi
             sleep 1
           done
+          node tests/routes.mjs
           node tests/http.mjs
 
       - name: Install browser used only for end-to-end checks
@@ -75,7 +77,19 @@ jobs:
           node tests/ui.mjs
 
       - name: Verify fresh shared-hosting installation and repeat update
+        if: ${{ !cancelled() }}
         run: bash tests/install.sh
         env:
           PINA_CONFIG: ${{ runner.temp }}/pina-test.php
           DB_NAME: pina_test
+
+      - name: Install Apache PHP module for shared-hosting routing checks
+        if: ${{ !cancelled() }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y apache2 libapache2-mod-php8.3 php8.3-mysql php8.3-mbstring
+          sudo a2dismod mpm_event || true
+          sudo a2enmod mpm_prefork rewrite php8.3
+      - name: Test actual Apache htaccess routing with stale physical folders
+        if: ${{ !cancelled() }}
+        run: bash tests/apache.sh
