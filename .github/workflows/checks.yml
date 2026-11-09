@@ -76,6 +76,13 @@ jobs:
           done
           node tests/ui.mjs
 
+      - name: Install Apache PHP and FastCGI modules for shared-hosting checks
+        if: ${{ !cancelled() }}
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y apache2 libapache2-mod-php8.3 php8.3-mysql php8.3-mbstring php8.3-cgi libapache2-mod-fcgid
+          sudo a2dismod mpm_event || true
+          sudo a2enmod mpm_prefork rewrite php8.3 fcgid
       - name: Verify fresh shared-hosting installation and repeat update
         if: ${{ !cancelled() }}
         run: bash tests/install.sh
@@ -83,13 +90,6 @@ jobs:
           PINA_CONFIG: ${{ runner.temp }}/pina-test.php
           DB_NAME: pina_test
 
-      - name: Install Apache PHP module for shared-hosting routing checks
-        if: ${{ !cancelled() }}
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y apache2 libapache2-mod-php8.3 php8.3-mysql php8.3-mbstring
-          sudo a2dismod mpm_event || true
-          sudo a2enmod mpm_prefork rewrite php8.3
       - name: Test actual Apache htaccess routing with stale physical folders
         if: ${{ !cancelled() }}
         run: bash tests/apache.sh

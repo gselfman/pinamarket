@@ -6,6 +6,19 @@ export PINA_BASE_URL=https://pina.market
 export PINA_CODE_DIR="${PINA_CODE_DIR:-$HOME/pinamarket-code}"
 export PINA_PUBLIC_DIR="${PINA_PUBLIC_DIR:-$HOME/www/pina.market}"
 export PINA_PHP_BIN="${PINA_PHP_BIN:-/opt/php/8.2/bin/php}"
+# Web PHP and CLI PHP are configured separately on reg.ru.
+PINA_FCGI_WRAPPER="${PINA_FCGI_WRAPPER:-}"
+if [[ -z "$PINA_FCGI_WRAPPER" ]]; then
+  for candidate in "$HOME/php-bin-regru-php82/php" "$HOME/php-bin-php82/php" "$HOME/php-bin/pina.market/php"; do
+    if [[ -f "$candidate" && -x "$candidate" ]]; then PINA_FCGI_WRAPPER="$candidate"; break; fi
+  done
+fi
+if [[ -z "$PINA_FCGI_WRAPPER" ]]; then
+  echo 'Не найден обработчик FastCGI PHP 8.2 в папках php-bin. Пришлите вывод: ls -l "$HOME"/php-bin*/php "$HOME"/php-bin/pina.market/php' >&2
+  exit 1
+fi
+export PINA_FCGI_WRAPPER
+
 export PINA_DB_HOST=127.0.0.1
 export PINA_DB_PORT=3306
 export PINA_DB_NAME=u3266069_pina_market

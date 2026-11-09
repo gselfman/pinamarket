@@ -4,6 +4,7 @@ app/*.lock
 app/config.php.new
 app/template.html
 public/pina-path.php
+public/pina-path.json
 release/
 backups/
 node_modules/
