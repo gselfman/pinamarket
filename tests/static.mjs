@@ -18,3 +18,5 @@ const brands=JSON.parse(fs.readFileSync('docs/brand-assets.json','utf8'));
 assert.deepEqual(brands.map(b=>b.id),JSON.parse(fs.readFileSync('app/catalog.json','utf8')).map(s=>s.id));
 for(const brand of brands){assert.ok(source.includes('logo: "/'+brand.file+'"'),brand.id+' is mapped to local original artwork');const bytes=fs.readFileSync('dist/'+brand.file);assert.equal((await import('node:crypto')).createHash('sha256').update(bytes).digest('hex'),brand.sha256);assert.ok(brand.source.startsWith('https://'));}
 console.log('PASS: all 11 catalog brands have local, fingerprinted original artwork');
+
+const favicon=JSON.parse(fs.readFileSync('app/favicon.json','utf8'));const page=fs.readFileSync('dist/index.html','utf8');for(const url of Object.values(favicon)){assert.ok(page.includes(url));assert.ok(fs.existsSync('dist'+url.split('?')[0]));}

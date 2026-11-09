@@ -80,7 +80,7 @@ const SERVICES = [ {
     cat: "Игры"
 }, {
     id: "discord",
-    logo: "/brand-discord-092c8111301c.png",
+    logo: "/brand-discord-5ba72d750bae.svg",
     name: "Discord",
     icon: "D",
     color: "#6464ba",

@@ -27,3 +27,6 @@ console.log(`PASS: legacy document links, including both slash forms (${base})`)
 
 for(const brand of JSON.parse(fs.readFileSync('docs/brand-assets.json','utf8'))){const r=await fetch(base+'/'+brand.file);assert.equal(r.status,200,brand.id+' brand image served');assert.ok((await r.arrayBuffer()).byteLength>100,brand.id+' nonempty image');}
 console.log('PASS: all service brand assets served locally ('+base+')');
+
+const favicons=JSON.parse(fs.readFileSync('app/favicon.json','utf8'));for(const path of Object.values(favicons)){const r=await fetch(base+path);assert.equal(r.status,200,'favicon served: '+path);assert.ok((await r.arrayBuffer()).byteLength>100);}
+console.log('PASS: favicon and Apple touch icon served locally');

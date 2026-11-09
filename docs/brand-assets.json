@@ -90,12 +90,12 @@
   {
     "id": "discord",
     "name": "Discord",
-    "file": "brand-discord-092c8111301c.png",
-    "source": "https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/62fddf0fde45a8baedcc7ee5_847541504914fd33810e70a0ea73177e%20(2)-1.png",
-    "sha256": "092c8111301c1a9a6bbf8a247bbb3b862d17ccf0ed04dc77ab930e9e87d76b5e",
+    "file": "brand-discord-5ba72d750bae.svg",
+    "source": "https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e278299a53f5bf88615e90_Symbol.svg",
+    "sha256": "5ba72d750bae7120e9b4d5dc0ec13b227e496a20df38944a607c1408c57d2891",
     "dimensions": [
-      32,
-      32
+      59,
+      44
     ]
   },
   {

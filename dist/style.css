@@ -14,3 +14,5 @@ textarea{font:inherit;width:100%;border:1px solid #dfe6db;border-radius:8px;padd
 .glass-row .service-icon img{width:30px;height:30px}
 @media(max-width:760px){.service-icon{width:56px;height:56px}.service-icon img{width:36px;height:36px}.service-icon.brand-nintendo,.service-icon.brand-razer{width:92px}.service-icon.brand-nintendo img,.service-icon.brand-razer img{width:72px;height:42px}}
 @media(max-width:760px){.hero-art .orbit{width:320px;height:230px}.hero-art .orbit.two{width:300px;height:210px}}
+
+.service-icon.brand-discord{background:#5865f2;border-color:#5865f2}
