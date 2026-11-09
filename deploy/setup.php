@@ -85,6 +85,7 @@ try{
  if(!$update){$existing=$pdo->query("SHOW TABLES LIKE 'pm_clients'")->fetchColumn();if($existing&&$pdo->query('SELECT COUNT(*) FROM pm_clients')->fetchColumn()>0)throw new RuntimeException('База уже содержит клиентов. Используйте другую пустую базу.');}
  // SQL is committed in the repository; no remote shell installers or package managers run here.
  foreach(explode(';',file_get_contents($root.'/database/schema.sql')) as $sql)if(trim($sql)!=='')$pdo->exec($sql);
+ if(!$pdo->query("SHOW COLUMNS FROM pm_services LIKE 'sort_order'")->fetch())$pdo->exec('ALTER TABLE pm_services ADD COLUMN sort_order INT UNSIGNED NOT NULL DEFAULT 0');
  $metaType=$pdo->query("SHOW COLUMNS FROM pm_meta LIKE 'value'")->fetch(PDO::FETCH_ASSOC);if(str_starts_with(strtolower($metaType['Type']),'varchar'))$pdo->exec('ALTER TABLE pm_meta MODIFY value TEXT NOT NULL');
  $version=$pdo->query("SELECT value FROM pm_meta WHERE name='schema_version'")->fetchColumn();if($version&&$version!=='1')throw new RuntimeException('Неподдерживаемая версия базы; требуется отдельная миграция.');
  if(!$update){

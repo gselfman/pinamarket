@@ -41,6 +41,7 @@ bootstrap="$(mktemp)"
 trap 'rm -f -- "$bootstrap"' EXIT
 curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/gselfman/pinamarket/main/deploy/bootstrap.sh -o "$bootstrap"
 if bash "$bootstrap"; then
+  bash "$PINA_CODE_DIR/deploy/mail-cron.sh" || printf 'Не настроена фоновая отправка писем. Добавьте указанное задание в Cron панели хостинга.\n' >&2
   printf '\nУСТАНОВКА ЗАВЕРШЕНА: HTTPS, база, страницы и ресурсы прошли проверку.\n'
   printf 'Вход: https://pina.market/login/ | Регистрация: https://pina.market/register/\n'
   printf 'Админка: https://pina.market/admin/\n'
