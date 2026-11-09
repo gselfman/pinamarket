@@ -86,7 +86,14 @@ if sudo -u nobody test -r "$active_app/config.php"; then echo 'Private configura
 active_hash="$(sha256sum "$active_app/api.php" | cut -d' ' -f1)"
 printf '\n// Source update smoke check\n' >> "$PINA_INSTALL_TEMP/code/app/api.php"
 [[ "$(sha256sum "$active_app/api.php" | cut -d' ' -f1)" == "$active_hash" ]]
+# Simulate the existing production schema before this release, then verify additive migration.
+php -r '$c=require $argv[1];$b=$c["db"];$p=new PDO("mysql:host=".$b["host"].";port=".$b["port"].";dbname=".$b["name"],$b["user"],$b["password"]);$p->exec("ALTER TABLE pm_services DROP COLUMN sort_order");$p->exec("DROP TABLE pm_mail_queue");' "$PINA_INSTALL_TEMP/code/app/config.php"
 php -d allow_url_fopen=0 "$PINA_INSTALL_TEMP/code/deploy/setup.php" --update
+PINA_CONFIG="$PINA_INSTALL_TEMP/code/app/config.php" php -r 'require $argv[1]."/app/bootstrap.php";require $argv[1]."/app/notifications.php";if(!in_array("sort_order",db()->query("SHOW COLUMNS FROM pm_services")->fetchAll(PDO::FETCH_COLUMN),true)||(int)one("SELECT COUNT(*) n FROM pm_clients")["n"]!==1)exit(1);queue_mail("admin@example.com","Queue transport check","Durable notification after schema migration");' "$PINA_INSTALL_TEMP/code"
+PINA_CONFIG="$PINA_INSTALL_TEMP/code/app/config.php" php "$PINA_INSTALL_TEMP/code/deploy/mail-worker.php" | grep -q 'SMTP accepted: 1'
+PINA_CONFIG="$PINA_INSTALL_TEMP/code/app/config.php" php "$PINA_INSTALL_TEMP/code/deploy/mail-worker.php" | grep -q 'SMTP accepted: 0'
+echo 'PASS: existing-schema migration and queued delivery through real TLS SMTP'
+
 php -d allow_url_fopen=0 "$PINA_INSTALL_TEMP/code/deploy/verify.php" https://pina.install.test
 php -r 'putenv("PATH=/nonexistent-pina-test-bin");require $argv[1];verify_site("https://pina.install.test");echo "PASS: PHP HTTPS fallback follows canonical and legacy redirects without curl\n";' "$PINA_INSTALL_TEMP/code/deploy/verify.php"
 php -r 'require $argv[1];$r=deployment_http_get("https://127.0.0.1/");if($r["status"]!==0||$r["error"]==="")exit(1);$r=deployment_http_get("https://pina.install.test/unsafe-redirect");if($r["status"]!==0||!str_contains($r["error"],"HTTPS запрещено"))exit(1);echo "PASS: wrong certificate name and HTTP downgrade rejected by both transports\n";' "$PINA_INSTALL_TEMP/code/deploy/verify.php"
