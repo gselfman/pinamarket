@@ -20,7 +20,7 @@ function setting(string $key,string $label,string $default=''):string{
  return ask($label,$default);
 }
 function put_private(string $path,string $content):void{$tmp=$path.'.new';if(file_put_contents($tmp,$content,LOCK_EX)===false)throw new RuntimeException('Не удалось записать '.$path);chmod($tmp,0600);if(!rename($tmp,$path))throw new RuntimeException('Не удалось сохранить '.$path);}
-function copy_tree(string $src,string $dst):void{if(!is_dir($dst))mkdir($dst,0755,true);foreach(array_diff(scandir($src),['.','..']) as $name){$from=$src.'/'.$name;$to=$dst.'/'.$name;if(is_dir($from)&&!is_link($from))copy_tree($from,$to);else{if(!copy($from,$to))throw new RuntimeException('Не удалось сохранить каталог проверки сертификата.');}}}
+function copy_tree(string $src,string $dst):void{if(!is_dir($dst))mkdir($dst,0755,true);chmod($dst,0755);foreach(array_diff(scandir($src),['.','..']) as $name){$from=$src.'/'.$name;$to=$dst.'/'.$name;if(is_dir($from)&&!is_link($from))copy_tree($from,$to);else{if(!copy($from,$to))throw new RuntimeException('Не удалось сохранить каталог проверки сертификата.');chmod($to,0644);}}}
 function copy_file(string $src,string $dst,int $mode=0644):void{$tmp=$dst.'.pina-new';if(!copy($src,$tmp))throw new RuntimeException('Не удалось скопировать '.$dst);chmod($tmp,$mode);if(!rename($tmp,$dst))throw new RuntimeException('Не удалось заменить '.$dst);}
 try{
  if(PHP_VERSION_ID<80200)throw new RuntimeException('Нужен PHP 8.2 или новее.');
@@ -67,6 +67,9 @@ try{
   $config=['base_url'=>$url,'public_dir'=>$public,'db'=>$db,'smtp'=>$smtp,'cash_address'=>$address,'cash_enabled'=>$address!=='','max_amount_minor'=>100000000,'debug'=>false];
  }
  $public=$config['public_dir'];if(!is_dir($public)||!is_writable($public))throw new RuntimeException('Каталог сайта недоступен.');
+ $fcgiWrapper=trim(getenv('PINA_FCGI_WRAPPER')?:($config['fcgi_wrapper']??''));
+ if($fcgiWrapper!==''){if(!preg_match('~^/[a-zA-Z0-9_./-]+$~D',$fcgiWrapper)||!is_file($fcgiWrapper)||!is_executable($fcgiWrapper))throw new RuntimeException('Обработчик FastCGI не найден или не исполняемый: '.$fcgiWrapper);$config['fcgi_wrapper']=$fcgiWrapper;out('Веб-обработчик PHP FastCGI: '.$fcgiWrapper);}
+
  $initialPublish=!is_file($public.'/.pina-installed');
  if($initialPublish&&count(array_diff(scandir($public),['.','..','.well-known']))>0){
   out('В выбранном каталоге уже есть сайт. Перед заменой создаётся полный архив файлов.');
@@ -105,6 +108,8 @@ try{
  $oldAppPath=(!$initialPublish&&is_file($public.'/pina-path.php'))?require $public.'/pina-path.php':null;
  $publishDir=$public;
  if($initialPublish){$publishDir=dirname($public).'/.pinamarket-stage-'.$stamp;if(!mkdir($publishDir,0755))throw new RuntimeException('Не удалось создать временный каталог рядом с сайтом.');if(is_dir($public.'/.well-known'))copy_tree($public.'/.well-known',$publishDir.'/.well-known');}
+ // mkdir modes are restricted by the shell umask (077 in bootstrap). Nginx needs public traversal.
+ if(!chmod($publishDir,0755))throw new RuntimeException('Не удалось установить права 0755 на публичный каталог.');
  $html=file_get_contents($root.'/dist/index.html');$tag=substr(hash('sha256',file_get_contents($root.'/dist/app.js').file_get_contents($root.'/dist/legal.js').file_get_contents($root.'/dist/style.css')),0,12);
  foreach(['app.js','legal.js','style.css'] as $asset)$html=str_replace('/'.$asset,'/'.$asset.'?v='.$tag,$html);
  // Keep running PHP code immutable while Git updates the source checkout.
@@ -116,6 +121,11 @@ try{
  put_private($releaseApp.'/release.json',json_encode(['id'=>$stamp,'assets'=>$assetHashes],JSON_THROW_ON_ERROR));
  foreach(['app.js','legal.js','style.css','pina-logo.png'] as $asset)copy_file($root.'/dist/'.$asset,$publishDir.'/'.$asset);
  foreach(['.htaccess','.user.ini'] as $asset)copy_file($root.'/public/'.$asset,$publishDir.'/'.$asset);
+ if($fcgiWrapper!==''){
+  $handlers="\n# Pina.market: explicit hosting PHP handler\nAddHandler fcgid-script .php\nFCGIWrapper ".$fcgiWrapper." .php\n";
+  if(file_put_contents($publishDir.'/.htaccess',$handlers,FILE_APPEND|LOCK_EX)===false)throw new RuntimeException('Не удалось сохранить обработчик PHP в .htaccess.');
+ }
+
  put_private($publishDir.'/pina-path.php',"<?php\nreturn ".var_export($releaseApp,true).";\n");
  copy_file($root.'/public/index.php',$publishDir.'/index.php');
  file_put_contents($publishDir.'/.pina-installed',gmdate('c'));chmod($publishDir.'/.pina-installed',0600);
@@ -130,6 +140,7 @@ try{
   if(!$initialPublish&&$oldAppPath){put_private($public.'/pina-path.php',"<?php\nreturn ".var_export($oldAppPath,true).";\n");$restore='tar -xzf '.escapeshellarg($backup).' -C '.escapeshellarg($public).' ./app.js ./legal.js ./style.css ./pina-logo.png ./index.php ./.htaccess ./.user.ini';passthru($restore,$restoreCode);if($restoreCode!==0)throw new RuntimeException('HTTPS-проверка не прошла. Прежний backend включён, но файлы нужно восстановить из архива '.$backup);throw new RuntimeException('HTTPS-проверка не прошла. Прежняя версия приложения восстановлена; проверьте SSL и DNS, затем повторите обновление.');}
   throw new RuntimeException('HTTPS-проверка не прошла. Проверьте настройки домена; настройки и база сохранены.');
  }
+ if($fcgiWrapper!=='')put_private($configFile,"<?php\nreturn ".var_export($config,true).";\n");
  out('Сайт отвечает, база подключена. Войдите в админку и задайте реальные условия сервисов.');
  out('Если был создан архив файлов, храните его вне сайта. Сервисы включаются после заполнения условий и регионов.');
 }catch(Throwable $e){fwrite(STDERR,'Ошибка: '.($e instanceof PDOException?'Не удалось выполнить операцию MySQL. Проверьте реквизиты базы, права и InnoDB.':$e->getMessage())."\n");exit(1);}

@@ -1,5 +1,10 @@
 <?php
 declare(strict_types=1);
+// This guard parses on PHP 7 and stops before loading files that require PHP 8.2.
+if(PHP_VERSION_ID<80200||!function_exists('str_starts_with')){
+ http_response_code(503);header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+ echo json_encode(['error'=>'Для сайта требуется PHP 8.2 или новее с доступными стандартными функциями. Фактический веб-PHP: '.PHP_VERSION.'; обработчик: '.PHP_SAPI],JSON_UNESCAPED_UNICODE);exit;
+}
 $appDir=is_file(__DIR__.'/pina-path.php')?require __DIR__.'/pina-path.php':dirname(__DIR__).'/app';
 if(is_file($appDir.'/config.php')){
  $config=require $appDir.'/config.php';

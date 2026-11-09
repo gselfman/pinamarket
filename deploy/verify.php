@@ -43,7 +43,8 @@ function verify_site(string $base,?string $expectedRelease=null,array $assets=[]
  $nonce=bin2hex(random_bytes(8));$checks=[];
  $get=function(string $path)use($base,$nonce):string{
   $response=deployment_http_get(rtrim($base,'/').$path.'?verify='.$nonce);
-  if($response['error']!==''||$response['status']!==200)throw new RuntimeException('Не прошла проверка '.$path.' (HTTP '.$response['status'].').'.($response['error']!==''?"\n".$response['error']:' Проверьте каталог домена, .htaccess и PHP.'));
+  $details=json_decode($response['body'],true);$publicError=is_array($details)&&is_string($details['error']??null)?' '.mb_substr($details['error'],0,500):'';
+  if($response['error']!==''||$response['status']!==200)throw new RuntimeException('Не прошла проверка '.$path.' (HTTP '.$response['status'].').'.($response['error']!==''?"\n".$response['error']:$publicError.' Проверьте каталог домена, .htaccess и PHP.'));
   return $response['body'];
  };
  $health=json_decode($get('/api/health/'),true);$id=$health['release']??'';
