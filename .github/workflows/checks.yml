@@ -76,6 +76,14 @@ jobs:
           done
           node tests/ui.mjs
 
+      - name: Upload service catalog screenshots
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pina-service-logos
+          path: ${{ runner.temp }}/pina-logos-*.png
+          retention-days: 7
+
       - name: Install Apache PHP and FastCGI modules for shared-hosting checks
         if: ${{ !cancelled() }}
         run: |

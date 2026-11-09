@@ -7,4 +7,5 @@ require $root.'/app/bootstrap.php';
 query('UPDATE pm_clients SET password_hash=?,password_prompt=0,temporary_until=NULL WHERE id IN(1000,1014)',[password_hash('PinaHttpTest2026-Secret',PASSWORD_DEFAULT)]);
 query("UPDATE pm_services SET status='available',fee_bps=500,regions_json='[\"RU\"]',conditions_text='Wallet credit in RUB, manual execution within one business day',instructions='Enter the account login',version=version+1 WHERE code='steam'");
 copy($root.'/dist/index.html',$root.'/app/template.html');foreach(['app.js','style.css','legal.js','pina-logo.png'] as $asset)copy($root.'/dist/'.$asset,$root.'/public/'.$asset);
+foreach(array_merge(glob($root.'/dist/brand-*.png'),glob($root.'/dist/brand-*.svg')) as $asset)copy($asset,$root.'/public/'.basename($asset));
 echo "HTTP test fixture prepared in disposable MySQL database.\n";

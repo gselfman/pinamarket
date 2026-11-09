@@ -118,9 +118,10 @@ try{
  foreach(scandir($root.'/app') as $name){if(in_array($name,['.','..','config.php','config.php.new','template.html'],true)||str_ends_with($name,'.lock'))continue;$from=$root.'/app/'.$name;if(is_file($from))copy_file($from,$releaseApp.'/'.$name,0600);}
  put_private($releaseApp.'/config.php',"<?php\nreturn ".var_export($config,true).";\n");
  put_private($releaseApp.'/template.html',$html);
- $assetHashes=[];foreach(['app.js','legal.js','style.css','pina-logo.png'] as $asset)$assetHashes[$asset]=hash_file('sha256',$root.'/dist/'.$asset);
+ $assetNames=['app.js','legal.js','style.css','pina-logo.png'];foreach(array_merge(glob($root.'/dist/brand-*.png'),glob($root.'/dist/brand-*.svg')) as $brandFile)$assetNames[]=basename($brandFile);
+ $assetHashes=[];foreach($assetNames as $asset)$assetHashes[$asset]=hash_file('sha256',$root.'/dist/'.$asset);
  put_private($releaseApp.'/release.json',json_encode(['id'=>$stamp,'assets'=>$assetHashes],JSON_THROW_ON_ERROR));
- foreach(['app.js','legal.js','style.css','pina-logo.png'] as $asset)copy_file($root.'/dist/'.$asset,$publishDir.'/'.$asset);
+ foreach($assetNames as $asset)copy_file($root.'/dist/'.$asset,$publishDir.'/'.$asset);
  foreach(['.htaccess','.user.ini'] as $asset)copy_file($root.'/public/'.$asset,$publishDir.'/'.$asset);
  if($fcgiWrapper!==''){
   $handlers="\n# Pina.market: explicit hosting PHP handler\nAddHandler fcgid-script .php\nFCGIWrapper ".$fcgiWrapper." .php\n";

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 const base=process.env.PINA_TEST_URL||'http://127.0.0.1:8081';let checks=0;
 const pages=['/','/login/','/register/','/cabinet/','/admin/','/reset/','/documents/'];
 const docs=['terms','privacy','refund','cookies','tariffs','requisites','consent'];
@@ -23,3 +24,6 @@ for(const [alias,target] of Object.entries({'/privacy':'/documents/privacy/','/p
  for(const suffix of ['', '/']){const path=alias+suffix;const r=await fetch(base+path,{redirect:'manual'});assert.ok([301,308].includes(r.status),path+' permanent legacy redirect');const page=await fetch(base+path);assert.equal(page.status,200,path+' usable document');assert.equal(page.url,base+target,path+' final canonical URL');assert.ok((await page.text()).includes('Pina Market LLC'),path+' current document');checks++;}
 }
 console.log(`PASS: legacy document links, including both slash forms (${base})`);
+
+for(const brand of JSON.parse(fs.readFileSync('docs/brand-assets.json','utf8'))){const r=await fetch(base+'/'+brand.file);assert.equal(r.status,200,brand.id+' brand image served');assert.ok((await r.arrayBuffer()).byteLength>100,brand.id+' nonempty image');}
+console.log('PASS: all service brand assets served locally ('+base+')');
