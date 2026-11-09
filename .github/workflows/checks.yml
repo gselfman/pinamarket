@@ -1,0 +1,81 @@
+name: PHP and MySQL checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local-test-only
+          MYSQL_DATABASE: pina_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -plocal-test-only"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, mbstring, openssl
+          coverage: none
+      - run: find app public deploy tests -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: node --check dist/app.js
+      - run: node tests/static.mjs
+      - run: bash -n deploy/install.sh && bash -n deploy/bootstrap.sh
+      - run: bash deploy/install.sh --check
+      - run: php tests/unit.php
+      - name: Create ephemeral test configuration
+        run: |
+          php -r '$c=["base_url"=>"https://pina.test","debug"=>true,"db"=>["host"=>"127.0.0.1","port"=>3306,"name"=>"pina_test","user"=>"root","password"=>"local-test-only"],"cash_address"=>"Test","max_amount_minor"=>100000000];file_put_contents(getenv("RUNNER_TEMP")."/pina-test.php","<?php return ".var_export($c,true).";");'
+      - run: php tests/integration.php
+        env:
+          PINA_CONFIG: ${{ runner.temp }}/pina-test.php
+          DB_NAME: pina_test
+
+      - name: Prepare disposable HTTP fixture
+        run: php tests/http_fixture.php
+        env:
+          PINA_CONFIG: ${{ runner.temp }}/pina-test.php
+          DB_NAME: pina_test
+      - name: Test real sessions and concurrent financial requests
+        run: |
+          PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8081 -t public deploy/router.php > "$RUNNER_TEMP/php-http.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:8081/api/health/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/http.mjs
+
+      - name: Install browser used only for end-to-end checks
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pina-ui" playwright@1.61.0
+          "$RUNNER_TEMP/pina-ui/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Refresh disposable HTTP fixture
+        run: php tests/http_fixture.php
+        env:
+          PINA_CONFIG: ${{ runner.temp }}/pina-test.php
+          DB_NAME: pina_test
+      - name: Test complete customer and operator flows in browser
+        env:
+          PINA_PLAYWRIGHT: ${{ runner.temp }}/pina-ui/node_modules/playwright/index.mjs
+        run: |
+          PHP_CLI_SERVER_WORKERS=4 php -S 127.0.0.1:8081 -t public deploy/router.php > "$RUNNER_TEMP/php-browser.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:8081/api/health/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/ui.mjs
+
+      - name: Verify fresh shared-hosting installation and repeat update
+        run: bash tests/install.sh
+        env:
+          PINA_CONFIG: ${{ runner.temp }}/pina-test.php
+          DB_NAME: pina_test

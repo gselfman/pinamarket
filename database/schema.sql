@@ -1,0 +1,42 @@
+CREATE TABLE IF NOT EXISTS pm_meta (name VARCHAR(50) PRIMARY KEY,value TEXT NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS pm_counters (name VARCHAR(32) PRIMARY KEY,value BIGINT UNSIGNED NOT NULL DEFAULT 0) ENGINE=InnoDB;
+INSERT IGNORE INTO pm_counters(name,value) VALUES ('client',0),('operation',0);
+CREATE TABLE IF NOT EXISTS pm_clients (
+ id BIGINT UNSIGNED PRIMARY KEY,email VARCHAR(254) NOT NULL UNIQUE,password_hash VARCHAR(255) NOT NULL,is_staff TINYINT NOT NULL DEFAULT 0,
+ balance_minor BIGINT NOT NULL DEFAULT 0,reserved_minor BIGINT NOT NULL DEFAULT 0,password_prompt TINYINT NOT NULL DEFAULT 1,temporary_until DATETIME NULL,
+ auth_version INT NOT NULL DEFAULT 1,created_at DATETIME NOT NULL,
+ CONSTRAINT pm_balance_nonnegative CHECK(balance_minor>=0 AND reserved_minor>=0 AND balance_minor>=reserved_minor)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS pm_services (
+ code VARCHAR(50) PRIMARY KEY,name VARCHAR(100) NOT NULL,description TEXT NOT NULL,instructions TEXT NOT NULL,conditions_text TEXT NOT NULL,
+ product VARCHAR(180) NOT NULL,category VARCHAR(40) NOT NULL,status VARCHAR(16) NOT NULL DEFAULT 'unavailable',fee_bps INT NOT NULL DEFAULT 500,
+ min_minor BIGINT NOT NULL DEFAULT 100,max_minor BIGINT NOT NULL DEFAULT 100000000,regions_json TEXT NOT NULL,version INT NOT NULL DEFAULT 1,updated_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS pm_operations (
+ number BIGINT UNSIGNED PRIMARY KEY,client_id BIGINT UNSIGNED NOT NULL,kind VARCHAR(16) NOT NULL,status VARCHAR(20) NOT NULL DEFAULT 'new',
+ amount_minor BIGINT NOT NULL,fee_minor BIGINT NOT NULL DEFAULT 0,total_minor BIGINT NOT NULL,service_code VARCHAR(50) NULL,snapshot_json TEXT NOT NULL,
+ recipient VARCHAR(150) NOT NULL DEFAULT '',region VARCHAR(80) NOT NULL DEFAULT '',bank_reference VARCHAR(150) NULL UNIQUE,assigned_to BIGINT UNSIGNED NULL,
+ result_text TEXT NOT NULL,request_key CHAR(36) NOT NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,
+ UNIQUE KEY pm_request(client_id,request_key),KEY pm_kind_status(kind,status),KEY pm_created(created_at),
+ FOREIGN KEY(client_id) REFERENCES pm_clients(id),FOREIGN KEY(service_code) REFERENCES pm_services(code),FOREIGN KEY(assigned_to) REFERENCES pm_clients(id),
+ CONSTRAINT pm_positive CHECK(amount_minor>0 AND total_minor>0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS pm_ledger (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,operation_id BIGINT UNSIGNED NOT NULL,event VARCHAR(20) NOT NULL,
+ balance_delta BIGINT NOT NULL DEFAULT 0,reserved_delta BIGINT NOT NULL DEFAULT 0,actor_id BIGINT UNSIGNED NOT NULL,created_at DATETIME NOT NULL,
+ UNIQUE KEY pm_financial_event(operation_id,event),FOREIGN KEY(operation_id) REFERENCES pm_operations(number),FOREIGN KEY(actor_id) REFERENCES pm_clients(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS pm_messages (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,client_id BIGINT UNSIGNED NOT NULL,operation_id BIGINT UNSIGNED NULL,author_id BIGINT UNSIGNED NOT NULL,
+ body TEXT NOT NULL,read_at DATETIME NULL,created_at DATETIME NOT NULL,KEY pm_inbox(client_id,id),
+ FOREIGN KEY(client_id) REFERENCES pm_clients(id),FOREIGN KEY(operation_id) REFERENCES pm_operations(number),FOREIGN KEY(author_id) REFERENCES pm_clients(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS pm_audit (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,actor_id BIGINT UNSIGNED NULL,action VARCHAR(80) NOT NULL,object_ref VARCHAR(120) NOT NULL,details_json TEXT NOT NULL,created_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS pm_rate_buckets (bucket CHAR(64) PRIMARY KEY,attempts INT NOT NULL DEFAULT 0,created_at DATETIME NOT NULL) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS pm_password_resets (token_hash CHAR(64) PRIMARY KEY,client_id BIGINT UNSIGNED NOT NULL,expires_at DATETIME NOT NULL,FOREIGN KEY(client_id) REFERENCES pm_clients(id)) ENGINE=InnoDB;
+CREATE TABLE IF NOT EXISTS pm_consents (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,client_id BIGINT UNSIGNED NOT NULL,document_version VARCHAR(40) NOT NULL,
+ document_hash CHAR(64) NOT NULL,accepted_at DATETIME NOT NULL,FOREIGN KEY(client_id) REFERENCES pm_clients(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

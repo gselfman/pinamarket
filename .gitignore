@@ -2,9 +2,13 @@
 app/config.php
 app/*.lock
 app/config.php.new
+app/template.html
+public/pina-path.php
 release/
 backups/
 node_modules/
 __pycache__/
 *.pyc
 *.log
+*.tar.gz
+var/
