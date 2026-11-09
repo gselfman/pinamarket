@@ -1,5 +1,6 @@
 const SERVICES = [ {
     id: "steam",
+    logo: "/brand-steam-305af9d8f212.png",
     name: "Steam",
     icon: "◉",
     color: "#203b52",
@@ -9,6 +10,7 @@ const SERVICES = [ {
     cat: "Игры"
 }, {
     id: "ps",
+    logo: "/brand-ps-efc33490c495.png",
     name: "PlayStation",
     icon: "PS",
     color: "#3262b9",
@@ -18,6 +20,7 @@ const SERVICES = [ {
     cat: "Игры"
 }, {
     id: "xbox",
+    logo: "/brand-xbox-62574509d0ad.png",
     name: "Xbox",
     icon: "X",
     color: "#3d783a",
@@ -27,6 +30,7 @@ const SERVICES = [ {
     cat: "Игры"
 }, {
     id: "nintendo",
+    logo: "/brand-nintendo-8f8fb0b5d3ea.svg",
     name: "Nintendo eShop",
     icon: "N",
     color: "#d8534e",
@@ -36,6 +40,7 @@ const SERVICES = [ {
     cat: "Игры"
 }, {
     id: "apple",
+    logo: "/brand-apple-c5a768356b12.png",
     name: "Apple",
     icon: "A",
     color: "#454a49",
@@ -45,6 +50,7 @@ const SERVICES = [ {
     cat: "Приложения"
 }, {
     id: "google",
+    logo: "/brand-google-d0b932ea11a9.png",
     name: "Google Play",
     icon: "▷",
     color: "#498879",
@@ -54,6 +60,7 @@ const SERVICES = [ {
     cat: "Приложения"
 }, {
     id: "roblox",
+    logo: "/brand-roblox-dc26e1341826.png",
     name: "Roblox",
     icon: "◇",
     color: "#444b49",
@@ -63,6 +70,7 @@ const SERVICES = [ {
     cat: "Игры"
 }, {
     id: "razer",
+    logo: "/brand-razer-1492b0039086.png",
     name: "Razer Gold",
     icon: "R",
     color: "#58862d",
@@ -72,6 +80,7 @@ const SERVICES = [ {
     cat: "Игры"
 }, {
     id: "discord",
+    logo: "/brand-discord-5ba72d750bae.svg",
     name: "Discord",
     icon: "D",
     color: "#6464ba",
@@ -81,6 +90,7 @@ const SERVICES = [ {
     cat: "Подписки"
 }, {
     id: "spotify",
+    logo: "/brand-spotify-f7934b08df36.png",
     name: "Spotify",
     icon: "≋",
     color: "#369864",
@@ -90,6 +100,7 @@ const SERVICES = [ {
     cat: "Подписки"
 }, {
     id: "netflix",
+    logo: "/brand-netflix-637c9c5261d7.png",
     name: "Netflix",
     icon: "N",
     color: "#c14148",
@@ -134,7 +145,7 @@ let lastFocus, csrf = "", signed = !1, staff = !1, view = "overview", adminView 
 
 function sicon(s) {
     const a = (s => SERVICES.find(x => x.id === s.id) || SERVICES[0])(s);
-    return `<span class="service-icon" style="background:${a.bg};color:${a.color}">${a.icon}</span>`;
+    return `<span class="service-icon brand-${a.id}"><img src="${a.logo}" alt="${esc(a.name)}" width="48" height="48" decoding="async"></span>`;
 }
 
 function serviceCards(list) {
@@ -186,7 +197,7 @@ const available = () => me.balance - me.reserved, titles = {
 
 function render() {
     if (!signed) {
-        $("#app").innerHTML = `<div class="status-ribbon">Оплата цифровых сервисов · Учёт в рублях</div><div class="wrap"><header class="header"><a class="logo" href="/" data-action="landing" aria-label="Pina.market — на главную"><img class="brand-logo" src="/pina-logo.png" alt="Pina.market" width="250" height="75"></a><nav class="links"><a href="#catalog">Сервисы</a><a href="#how">Как это работает</a><a href="#faq">Вопросы</a><button class="btn small" data-action="auth">Личный кабинет <span>↗</span></button></nav></header><main><section class="hero"><div><div class="eyebrow"><span class="dot"></span>Ваш доступ к цифровому миру</div><h1>Любимые сервисы.<br>Один <span>баланс.</span><br>Всё под рукой.</h1><p>Игры, приложения и подписки — в одном месте. Пополняйте баланс Pina.market и оформляйте заказы на нужные цифровые сервисы.</p><div class="actions"><button class="btn" data-action="auth">Открыть кабинет <span>↗</span></button><a class="btn light" href="#catalog">Выбрать сервис</a></div><div class="note">Учёт в рублях · История операций · Условия до оплаты</div></div><div class="hero-art" aria-hidden="true"><div class="orb"></div><div class="orbit"></div><div class="orbit two"></div><div class="floating fl1">◉</div><div class="floating fl2">X</div><div class="floating fl3">N</div><div class="glass-card"><div class="glass-head"><img class="brand-logo hero-brand" src="/pina-logo.png" alt="Pina.market" width="250" height="75"><span>↗</span></div><div class="glass-balance">12 500 <span style="font-size:23px;color:#79916d">₽</span></div><div class="note">Баланс для ваших цифровых покупок</div><div class="glass-row"><span class="service-icon" style="background:#e7eef5;color:#263f54">◉</span><div><b style="font-size:12px">Steam Wallet</b><small>Цифровые товары и услуги</small></div><span style="margin-left:auto;font-size:12px">2 100 ₽</span></div></div><div class="verified"><span class="check">✓</span>Все операции в личном кабинете</div></div></section><div class="service-strip"><span>STEAM</span><span>PlayStation</span><span>⊞ Xbox</span><span>Apple</span><span>ROBLOX</span><span>≋ Spotify</span></div><section class="section" id="catalog"><div class="section-top"><div><div class="eyebrow">Каталог сервисов</div><h2>Для игр. Для жизни.<br>Для вас.</h2></div><p>Игры, приложения и подписки.<br>Вид продукта и доступный регион уточняются при оформлении.</p></div><div class="catalog">${serviceCards()}</div><div class="note" style="margin-top:19px">Доступность зависит от продукта и региона аккаунта. Точные условия указаны в карточке сервиса.</div></section><section class="section" id="how" style="padding-top:10px"><div class="eyebrow">Три простых шага</div><h2>От баланса — к новому опыту</h2><div class="steps"><article class="step"><b>01 / ЛИЧНЫЙ КАБИНЕТ</b><h3>Начните с регистрации</h3><p>Укажите email и получите временный пароль на почту. В кабинете — доступный баланс, заявки и история каждого заказа.</p></article><article class="step"><b>02 / ПОПОЛНЕНИЕ</b><h3>Внесите аванс в кассе</h3><p>Получите реквизиты Pina Market и номер операции. После сверки поступления администратор зачислит аванс.</p></article><article class="step"><b>03 / ЦИФРОВЫЕ СЕРВИСЫ</b><h3>Выберите, что нужно</h3><p>Укажите сервис и реквизиты получателя. Проверьте итоговую стоимость и подтвердите заказ с вашего баланса.</p></article></div></section><section class="section faq" id="faq" style="padding-top:0"><div class="eyebrow">На связи</div><h2>Понятно до первого заказа</h2><details><summary>Как пополнить баланс Pina.market?</summary><p>В разделе «Счёт» создайте заявку и выберите внесение наличных в кассе. Система выдаст реквизиты и назначение платежа. Адрес кассы и порядок внесения указаны в заявке. Баланс меняется только после сверки поступления администратором.</p></details><details><summary>Все сервисы пополняются напрямую?</summary><p>В зависимости от сервиса вы получаете зачисление на аккаунт, подарочную карту, цифровой код или подписку. Тип продукта показывается перед подтверждением.</p></details><details><summary>Что происходит, если заказ не выполнен?</summary><p>Сумма заказа резервируется. Если исполнение отменено, резерв освобождается. Порядок возврата неиспользованного аванса описан в <a href="/documents/refund/">правилах возврата</a>.</p></details></section><section class="dark-section"><div><h2>Ваш цифровой мир.<br>Теперь в одном кабинете.</h2><p>Создайте кабинет, пополните баланс и оформите первый заказ.</p></div><button class="btn lime" data-action="auth" data-id="register">Создать кабинет <span>↗</span></button></section></main><footer class="footer"><div class="foot-top"><a class="logo" href="/" data-action="landing" aria-label="Pina.market — на главную"><img class="brand-logo" src="/pina-logo.png" alt="Pina.market" width="250" height="75"></a><div class="foot-links">${Object.entries(LEGAL).map(([k, d]) => `<button class="textbtn" data-action="doc" data-id="${k}">${d.title}</button>`).join("")}</div></div><div class="note">© 2026 Pina Market LLC · ${COMPANY.email}<br>Оплата цифровых товаров и услуг иностранных сервисов. Названия сервисов принадлежат правообладателям; партнёрство с ними не заявляется.</div></footer></div>`;
+        $("#app").innerHTML = `<div class="status-ribbon">Оплата цифровых сервисов · Учёт в рублях</div><div class="wrap"><header class="header"><a class="logo" href="/" data-action="landing" aria-label="Pina.market — на главную"><img class="brand-logo" src="/pina-logo.png" alt="Pina.market" width="250" height="75"></a><nav class="links"><a href="#catalog">Сервисы</a><a href="#how">Как это работает</a><a href="#faq">Вопросы</a><button class="btn small" data-action="auth">Личный кабинет <span>↗</span></button></nav></header><main><section class="hero"><div><div class="eyebrow"><span class="dot"></span>Ваш доступ к цифровому миру</div><h1>Любимые сервисы.<br>Один <span>баланс.</span><br>Всё под рукой.</h1><p>Игры, приложения и подписки — в одном месте. Пополняйте баланс Pina.market и оформляйте заказы на нужные цифровые сервисы.</p><div class="actions"><button class="btn" data-action="auth">Открыть кабинет <span>↗</span></button><a class="btn light" href="#catalog">Выбрать сервис</a></div><div class="note">Учёт в рублях · История операций · Условия до оплаты</div></div><div class="hero-art" aria-hidden="true"><div class="orb"></div><div class="orbit"></div><div class="orbit two"></div><div class="floating fl1">◉</div><div class="floating fl2">X</div><div class="floating fl3">N</div><div class="glass-card"><div class="glass-head"><img class="brand-logo hero-brand" src="/pina-logo.png" alt="Pina.market" width="250" height="75"><span>↗</span></div><div class="glass-balance">12 500 <span style="font-size:23px;color:#79916d">₽</span></div><div class="note">Баланс для ваших цифровых покупок</div><div class="glass-row">${sicon(SERVICES[0])}<div><b style="font-size:12px">Steam Wallet</b><small>Цифровые товары и услуги</small></div><span style="margin-left:auto;font-size:12px">2 100 ₽</span></div></div><div class="verified"><span class="check">✓</span>Все операции в личном кабинете</div></div></section><div class="service-strip"><span>STEAM</span><span>PlayStation</span><span>⊞ Xbox</span><span>Apple</span><span>ROBLOX</span><span>≋ Spotify</span></div><section class="section" id="catalog"><div class="section-top"><div><div class="eyebrow">Каталог сервисов</div><h2>Для игр. Для жизни.<br>Для вас.</h2></div><p>Игры, приложения и подписки.<br>Вид продукта и доступный регион уточняются при оформлении.</p></div><div class="catalog">${serviceCards()}</div><div class="note" style="margin-top:19px">Доступность зависит от продукта и региона аккаунта. Точные условия указаны в карточке сервиса.</div></section><section class="section" id="how" style="padding-top:10px"><div class="eyebrow">Три простых шага</div><h2>От баланса — к новому опыту</h2><div class="steps"><article class="step"><b>01 / ЛИЧНЫЙ КАБИНЕТ</b><h3>Начните с регистрации</h3><p>Укажите email и получите временный пароль на почту. В кабинете — доступный баланс, заявки и история каждого заказа.</p></article><article class="step"><b>02 / ПОПОЛНЕНИЕ</b><h3>Внесите аванс в кассе</h3><p>Получите реквизиты Pina Market и номер операции. После сверки поступления администратор зачислит аванс.</p></article><article class="step"><b>03 / ЦИФРОВЫЕ СЕРВИСЫ</b><h3>Выберите, что нужно</h3><p>Укажите сервис и реквизиты получателя. Проверьте итоговую стоимость и подтвердите заказ с вашего баланса.</p></article></div></section><section class="section faq" id="faq" style="padding-top:0"><div class="eyebrow">На связи</div><h2>Понятно до первого заказа</h2><details><summary>Как пополнить баланс Pina.market?</summary><p>В разделе «Счёт» создайте заявку и выберите внесение наличных в кассе. Система выдаст реквизиты и назначение платежа. Адрес кассы и порядок внесения указаны в заявке. Баланс меняется только после сверки поступления администратором.</p></details><details><summary>Все сервисы пополняются напрямую?</summary><p>В зависимости от сервиса вы получаете зачисление на аккаунт, подарочную карту, цифровой код или подписку. Тип продукта показывается перед подтверждением.</p></details><details><summary>Что происходит, если заказ не выполнен?</summary><p>Сумма заказа резервируется. Если исполнение отменено, резерв освобождается. Порядок возврата неиспользованного аванса описан в <a href="/documents/refund/">правилах возврата</a>.</p></details></section><section class="dark-section"><div><h2>Ваш цифровой мир.<br>Теперь в одном кабинете.</h2><p>Создайте кабинет, пополните баланс и оформите первый заказ.</p></div><button class="btn lime" data-action="auth" data-id="register">Создать кабинет <span>↗</span></button></section></main><footer class="footer"><div class="foot-top"><a class="logo" href="/" data-action="landing" aria-label="Pina.market — на главную"><img class="brand-logo" src="/pina-logo.png" alt="Pina.market" width="250" height="75"></a><div class="foot-links">${Object.entries(LEGAL).map(([k, d]) => `<button class="textbtn" data-action="doc" data-id="${k}">${d.title}</button>`).join("")}</div></div><div class="note">© 2026 Pina Market LLC · ${COMPANY.email}<br>Оплата цифровых товаров и услуг иностранных сервисов. Названия сервисов принадлежат правообладателям; партнёрство с ними не заявляется.</div></footer></div>`;
         return;
     }
     renderCabinet();
@@ -207,7 +218,7 @@ function renderCabinet() {
     }).join("")}</nav><div class="side-bottom"><div class="side-box">ID клиента <b>${me.id}</b><br><a href="mailto:mail@pina.market">mail@pina.market ↗</a></div><button class="textbtn" data-action="landing">На главную</button><button class="textbtn" data-action="logout">Выйти</button></div></aside><main class="main"><header class="topbar"><span class="crumb">${"admin" === view ? "Управление Pina.market" : "Личный кабинет / " + titles[view][0]}</span><span class="mobile-logo"><a class="logo" href="/" data-action="landing" aria-label="Pina.market — на главную"><img class="brand-logo" src="/pina-logo.png" alt="Pina.market" width="250" height="75"></a></span><div style="display:flex;gap:12px;align-items:center"><button class="textbtn" data-action="view" data-id="notifications" aria-label="Уведомления">♧ ${messages.filter(m => !m.read).length || ""}</button><button class="textbtn profile" data-action="view" data-id="profile"><span>${esc(me.email)} · ID ${me.id}</span><b class="avatar">${esc(me.email[0].toUpperCase())}</b></button></div></header><div class="page-head"><div><h1>${titles[view][0]}</h1><p>${titles[view][1]}${"admin" !== view ? " · ID " + me.id : ""}</p></div>${[ "overview", "balance" ].includes(view) ? '<button class="btn small" data-action="view" data-id="account">＋ Пополнить</button>' : ""}</div><div id="content">${function() {
         switch (view) {
           case "overview":
-            return `<div class="balance-row"><div class="balance-card"><small>Доступный баланс · RUB</small><strong>${money(available())}</strong><button class="btn lime small" data-action="view" data-id="account">＋ Пополнить баланс</button></div><div class="stat"><small>В резерве</small><strong>${money(me.reserved)}</strong><p>По заявкам на исполнении</p></div><div class="stat"><small>ID клиента</small><strong>${me.id}</strong><p>Указывайте при обращении в поддержку</p></div></div><div class="subhead"><h2>Сервисы</h2><button class="textbtn" data-action="view" data-id="services">Весь каталог ↗</button></div><div class="catalog">${serviceCards(services.filter(s => "hidden" !== s.status).slice(0, 8))}</div><div class="subhead"><h2>Последние заявки</h2></div><div class="panel">${operationTable(operations.filter(o => "order" === o.kind).slice(0, 5))}</div>`;
+            return `<div class="balance-row"><div class="balance-card"><small>Доступный баланс · RUB</small><strong>${money(available())}</strong><button class="btn lime small" data-action="view" data-id="account">＋ Пополнить баланс</button></div><div class="stat"><small>В резерве</small><strong>${money(me.reserved)}</strong><p>По заявкам на исполнении</p></div><div class="stat"><small>ID клиента</small><strong>${me.id}</strong><p>Указывайте при обращении в поддержку</p></div></div><div class="subhead"><h2>Сервисы</h2><button class="textbtn" data-action="view" data-id="services">Весь каталог ↗</button></div><div class="catalog">${serviceCards(services.filter(s => "hidden" !== s.status))}</div><div class="subhead"><h2>Последние заявки</h2></div><div class="panel">${operationTable(operations.filter(o => "order" === o.kind).slice(0, 5))}</div>`;
 
           case "services":
             return `<div class="subhead"><div class="filter">${[ "Все", "Игры", "Приложения", "Подписки" ].map(f => `<button class="chip ${filter === f ? "active" : ""}" data-action="category" data-id="${f}">${f}</button>`).join("")}</div><input class="search" id="search" value="${esc(query)}" placeholder="Найти сервис" aria-label="Найти сервис"></div><div class="catalog" id="catalog-results">${filtered()}</div>`;

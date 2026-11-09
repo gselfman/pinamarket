@@ -3,3 +3,16 @@
 /* Original Pina.market artwork, preserved aspect ratio. */
 .brand-logo{display:block;width:210px;height:auto;object-fit:contain}.logo{letter-spacing:normal;flex-shrink:0}.hero-brand{width:135px}.sidebar .brand-logo{width:172px}.footer .brand-logo{width:190px}.dialog .brand-logo{width:185px}@media(max-width:1100px){.sidebar .logo{padding-left:0}.sidebar .brand-logo{width:150px}}@media(max-width:760px){.header .brand-logo{width:175px}.mobile-logo .brand-logo{width:145px}.footer .brand-logo{width:180px}.dialog .brand-logo{width:180px}.hero-brand{width:125px}}@media(max-width:370px){.header .brand-logo{width:150px}}
 textarea{font:inherit;width:100%;border:1px solid #dfe6db;border-radius:8px;padding:12px;resize:vertical;color:var(--ink);line-height:1.7}textarea:focus{outline:2px solid #c6ddba}.admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:25px}.registry-filters{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:14px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:20px}.registry-filters .field input,.registry-filters .field select{padding:10px}.filter-actions{display:flex;align-items:end;gap:10px}.pagination{display:flex;justify-content:space-between;align-items:center;margin-top:19px;gap:15px}.notification{margin-bottom:12px}.notification p{white-space:pre-line;line-height:1.8;font-size:13px}.mail-preview{padding:20px;background:#f1f6eb;border-radius:10px;font-size:12px;line-height:1.9;margin:20px 0;overflow-wrap:anywhere}.client-message{background:#eff3f8;color:#526a82}.nav button{font-size:11px;padding:11px 12px}@media(max-width:760px){.registry-filters{grid-template-columns:1fr 1fr;padding:14px;gap:11px}.filter-actions{grid-column:1/-1}.admin-tabs .chip{font-size:10px;padding:9px 11px}.pagination .note{font-size:10px}.nav button:nth-last-child(-n+3){display:none}.nav button{font-size:9px;padding:8px 5px}.topbar .textbtn{padding:5px}}
+/* Original brand artwork; each image keeps its native colours and aspect ratio. */
+.service-icon{width:64px;height:64px;border-radius:16px;background:#fff;border:1px solid var(--line);overflow:hidden}
+.service-icon img{display:block;width:42px;height:42px;object-fit:contain}
+.service-icon.brand-nintendo,.service-icon.brand-razer{width:108px}
+.service-icon.brand-nintendo{background:#e60012;border-color:#e60012}
+.service-icon.brand-razer{background:#101010;border-color:#101010}
+.service-icon.brand-nintendo img,.service-icon.brand-razer img{width:84px;height:48px}
+.glass-row .service-icon{width:42px;height:42px;border-radius:10px}
+.glass-row .service-icon img{width:30px;height:30px}
+@media(max-width:760px){.service-icon{width:56px;height:56px}.service-icon img{width:36px;height:36px}.service-icon.brand-nintendo,.service-icon.brand-razer{width:92px}.service-icon.brand-nintendo img,.service-icon.brand-razer img{width:72px;height:42px}}
+@media(max-width:760px){.hero-art .orbit{width:320px;height:230px}.hero-art .orbit.two{width:300px;height:210px}}
+
+.service-icon.brand-discord{background:#5865f2;border-color:#5865f2}

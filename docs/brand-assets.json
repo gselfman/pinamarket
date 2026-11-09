@@ -1,0 +1,123 @@
+[
+  {
+    "id": "steam",
+    "name": "Steam",
+    "file": "brand-steam-305af9d8f212.png",
+    "source": "https://store.steampowered.com/favicon.ico",
+    "sha256": "305af9d8f212a557ba4337569b67236d21cc10687ffa8488e2eba61141b7dd24",
+    "dimensions": [
+      256,
+      256
+    ]
+  },
+  {
+    "id": "ps",
+    "name": "PlayStation",
+    "file": "brand-ps-efc33490c495.png",
+    "source": "https://gmedia.playstation.com/is/image/SIEPDC/ps-logo-favicon?$icon-196-196--t$",
+    "sha256": "efc33490c495185864b07a9d29cd637d945008ad9a0ab086de4bfea285988d3f",
+    "dimensions": [
+      400,
+      400
+    ]
+  },
+  {
+    "id": "xbox",
+    "name": "Xbox",
+    "file": "brand-xbox-62574509d0ad.png",
+    "source": "https://www.xbox.com/favicon-192.png",
+    "sha256": "62574509d0adbd7c08cf0b552840b03bf45e85cc8a403cab4b8bb1b6a749d68c",
+    "dimensions": [
+      192,
+      192
+    ]
+  },
+  {
+    "id": "nintendo",
+    "name": "Nintendo eShop",
+    "file": "brand-nintendo-8f8fb0b5d3ea.svg",
+    "source": "https://storemedia.nintendo.com/ui/images/logos/repair/logo-nintendo-01.svg",
+    "sha256": "8f8fb0b5d3eaa822909d0577bdb3e59c7259bedf16615fc3779f3701e833b5c2",
+    "dimensions": [
+      103,
+      25.8
+    ]
+  },
+  {
+    "id": "apple",
+    "name": "Apple",
+    "file": "brand-apple-c5a768356b12.png",
+    "source": "https://www.apple.com/favicon.ico",
+    "sha256": "c5a768356b120989e4c15055e6422799693879c76f43528c3a0cbfdb2b7b3705",
+    "dimensions": [
+      64,
+      64
+    ]
+  },
+  {
+    "id": "google",
+    "name": "Google Play",
+    "file": "brand-google-d0b932ea11a9.png",
+    "source": "https://www.gstatic.com/images/branding/product/2x/play_prism_64dp.png",
+    "sha256": "d0b932ea11a9f4405f59b1e9ea73c6c1bbf0ad1aae3e56a4973fd25d2fd90847",
+    "dimensions": [
+      128,
+      128
+    ]
+  },
+  {
+    "id": "roblox",
+    "name": "Roblox",
+    "file": "brand-roblox-dc26e1341826.png",
+    "source": "https://images.rbxcdn.com/905bd722ee0a6ceda3caacde54c0b081.png",
+    "sha256": "dc26e13418269a7e3115ea3a9596f20fe5a2f31bfb633c17b54908f536a86323",
+    "dimensions": [
+      180,
+      180
+    ]
+  },
+  {
+    "id": "razer",
+    "name": "Razer Gold",
+    "file": "brand-razer-1492b0039086.png",
+    "source": "https://media.gold.razer.com/goldweb/site/images/logo/razer-gold-silver.png",
+    "sha256": "1492b00390861d02d69594e291ffc8a0e228cfdf5d98d52f503ddbb7532b949d",
+    "dimensions": [
+      214,
+      120
+    ]
+  },
+  {
+    "id": "discord",
+    "name": "Discord",
+    "file": "brand-discord-5ba72d750bae.svg",
+    "source": "https://cdn.prod.website-files.com/6257adef93867e50d84d30e2/66e278299a53f5bf88615e90_Symbol.svg",
+    "sha256": "5ba72d750bae7120e9b4d5dc0ec13b227e496a20df38944a607c1408c57d2891",
+    "dimensions": [
+      59,
+      44
+    ]
+  },
+  {
+    "id": "spotify",
+    "name": "Spotify",
+    "file": "brand-spotify-f7934b08df36.png",
+    "source": "https://open.spotifycdn.com/cdn/images/favicon.0f31d2ea.ico",
+    "sha256": "f7934b08df3631236576b30f63af7998731645c53c62a56e52ad68b5ed58b764",
+    "dimensions": [
+      48,
+      48
+    ]
+  },
+  {
+    "id": "netflix",
+    "name": "Netflix",
+    "file": "brand-netflix-637c9c5261d7.png",
+    "source": "https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2016.png",
+    "sha256": "637c9c5261d71e1114776588b5b0a6c6cd31217acf0dbded21605d74009312cd",
+    "dimensions": [
+      64,
+      64
+    ]
+  }
+]
