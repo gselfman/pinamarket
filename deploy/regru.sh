@@ -27,4 +27,13 @@ printf 'Существующие файлы сайта будут сохране
 bootstrap="$(mktemp)"
 trap 'rm -f -- "$bootstrap"' EXIT
 curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/gselfman/pinamarket/main/deploy/bootstrap.sh -o "$bootstrap"
-bash "$bootstrap"
+if bash "$bootstrap"; then
+  printf '\nУСТАНОВКА ЗАВЕРШЕНА: HTTPS, база, страницы и ресурсы прошли проверку.\n'
+  printf 'Вход: https://pina.market/login/ | Регистрация: https://pina.market/register/\n'
+  printf 'Админка: https://pina.market/admin/\n'
+else
+  result=$?
+  printf '\nУСТАНОВКА НЕ ЗАВЕРШЕНА (код %s). Причина указана выше.\n' "$result" >&2
+  printf 'Пришлите последние строки вывода без паролей. До успешной проверки сайт не считается опубликованным.\n' >&2
+  exit "$result"
+fi

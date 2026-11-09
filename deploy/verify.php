@@ -14,7 +14,7 @@ function verify_site(string $base,?string $expectedRelease=null,array $assets=[]
  $health=json_decode($get('/api/health/'),true);$id=$health['release']??'';
  if(($health['status']??'')!=='ok'||!is_string($id)||$id===''||($expectedRelease!==null&&$id!==$expectedRelease))throw new RuntimeException('Домен отвечает другой версией приложения либо не подключён к установленной базе.');
  $checks[]='/api/health/';
- foreach(['/','/login/','/register/','/cabinet/','/admin/','/reset/','/documents/','/documents/terms/','/documents/privacy/','/documents/refund/','/documents/cookies/','/documents/tariffs/','/documents/requisites/','/documents/consent/'] as $path){
+ foreach(['/','/login/','/register/','/cabinet/','/admin/','/reset/','/documents/','/documents/terms/','/documents/privacy/','/documents/refund/','/documents/cookies/','/documents/tariffs/','/documents/requisites/','/documents/consent/','/privacy','/publichnaya-oferta','/offer'] as $path){
   $body=$get($path);
   if(!str_contains($body,'name="pina-release" content="'.htmlspecialchars($id,ENT_QUOTES,'UTF-8').'"'))throw new RuntimeException('Страница '.$path.' отвечает другой версией или заглушкой хостинга.');
   $checks[]=$path;
