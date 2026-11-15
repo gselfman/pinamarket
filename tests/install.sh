@@ -189,3 +189,20 @@ status,body=post({'X-CSRFToken':config['csrf']})
 assert status==200 and body.get('id'),(status,body)
 print('PASS: deployed gift-card PHP API accepts the browser CSRF header and rejects a missing token')
 PY
+# Staff bookmark routing is independent from old financial history access.
+python3 - <<'PY'
+import urllib.request,urllib.error
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+ def redirect_request(self,req,fp,code,msg,headers,newurl):return None
+opener=urllib.request.build_opener(NoRedirect(),urllib.request.ProxyHandler({}))
+for path in ['/admin','/admin/']:
+ try:opener.open('https://pina.install.test'+path);raise AssertionError('Expected redirect')
+ except urllib.error.HTTPError as e:
+  assert e.code==302 and e.headers['Location']=='/giftcards/#/admin'
+legacy=opener.open('https://pina.install.test/admin/?legacy=1').read().decode()
+assert 'data-pina-page="/admin/"' in legacy
+print('PASS: admin bookmarks redirect to gift cards; explicit legacy history remains accessible')
+PY
+# Existing verified staff account is fixture data, never an automatic production bypass.
+PINA_CONFIG="$PINA_INSTALL_TEMP/giftcode-repeat/app/config.php" php -r 'require $argv[1]."/app/bootstrap.php";query("INSERT IGNORE INTO pg_profiles(client_id,email_verified_at,created_at) VALUES(1000,?,?)",[now(),now()]);' "$PINA_INSTALL_TEMP/giftcode-repeat"
+PINA_PLAYWRIGHT="$RUNNER_TEMP/pina-ui/node_modules/playwright" node tests/giftcards-login.cjs

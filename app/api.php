@@ -9,7 +9,7 @@ function api_route(string $route,string $method):mixed {
  if($post)csrf_check();
  if(str_starts_with($route,'gift/')){require_once __DIR__.'/giftcards.php';return giftcards_route(substr($route,5),$method,$d);}
  if($post&&in_array($route,['deposits/','orders/'],true)&&(cfg()['giftcards']['site_mode']??false))throw new ApiError('Для новых покупок выберите карту компании. Прежние заявки доступны в истории.',409);
- if($route==='config/'&&$get)return ['csrf'=>$_SESSION['csrf'],'legalVersion'=>legal_data()['version']]+site_settings();
+ if($route==='config/'&&$get)return ['csrf'=>$_SESSION['csrf'],'legalVersion'=>legal_data()['version'],'giftcardsAdminUrl'=>(cfg()['giftcards']['site_mode']??false)?'/giftcards/#/admin':null]+site_settings();
  if($route==='health/'&&$get){one('SELECT value FROM pm_counters WHERE name=?',['operation']);$release=is_file(__DIR__.'/release.json')?json_decode(file_get_contents(__DIR__.'/release.json'),true):[];return ['status'=>'ok','release'=>$release['id']??'source'];}
  if($route==='register/'&&$post){
   $legal=legal_data();if(($d['accepted']??false)!==true||($d['version']??'')!==$legal['version'])throw new ApiError('Ознакомьтесь с актуальными условиями и подтвердите согласие');$email=strtolower(txt($d,'email',254));if(!filter_var($email,FILTER_VALIDATE_EMAIL))throw new ApiError('Проверьте email');throttle('register',$email,5);

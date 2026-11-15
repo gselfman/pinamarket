@@ -136,6 +136,10 @@ const SERVICES = [ {
     cancelled: "Отменено"
 };
 
+const legacyAdminRequested = new URLSearchParams(location.search).get("legacy") === "1";
+const adminPath = () => legacyAdminRequested ? "/admin/?legacy=1" : "/admin/";
+let giftcardsAdminUrl = "";
+
 let lastFocus, csrf = "", signed = !1, staff = !1, view = "overview", adminView = "deposits", selected = "", sessionEmail = "", firstPrompt = !1, filter = "Все", query = "", currentPage = 1, registry = {
     items: [],
     page: 1,
@@ -352,7 +356,8 @@ async function refresh() {
 
 async function go(v) {
     await sync();
-    view = v, history.replaceState(null,"",v==="admin"?"/admin/":"/cabinet/"), filter = "Все", query = "", currentPage = 1, listFilters = {}, closeModal(), 
+    if (v === "admin" && giftcardsAdminUrl && !legacyAdminRequested) { location.assign(giftcardsAdminUrl); return; }
+    view = v, history.replaceState(null,"",v==="admin"?adminPath():"/cabinet/"), filter = "Все", query = "", currentPage = 1, listFilters = {}, closeModal(),
     render(), await loadList(), window.scrollTo(0, 0);
 }
 
@@ -403,7 +408,8 @@ document.addEventListener("click", e => {
 
           case "admin":
             if (!staff) return void auth();
-            history.replaceState(null, "", "/admin/"), view = "admin", adminView = "deposits", 
+            if (giftcardsAdminUrl && !legacyAdminRequested) { location.assign(giftcardsAdminUrl); break; }
+            history.replaceState(null, "", adminPath()), view = "admin", adminView = "deposits",
             listFilters = {}, currentPage = 1, closeModal(), render(), await loadList();
             break;
 
@@ -573,8 +579,10 @@ document.addEventListener("click", e => {
                     csrf = r.csrf, firstPrompt = r.prompt, staff = r.staff;
                 }
                 await async function(email) {
-                    if (sessionEmail = email, signed = !0, await sync(), view = location.pathname.startsWith("/admin") && staff ? "admin" : "overview", 
-                    closeModal(), history.replaceState(null,"",view==="admin"?"/admin/":"/cabinet/"), render(), "admin" === view && await loadList(), firstPrompt) passwordDialog(!0); else if (selected) {
+                    sessionEmail = email; signed = !0; await sync();
+                    if (staff && giftcardsAdminUrl && !legacyAdminRequested) { location.assign(giftcardsAdminUrl); return; }
+                    if (view = location.pathname.startsWith("/admin") && staff ? "admin" : "overview",
+                    closeModal(), history.replaceState(null,"",view==="admin"?adminPath():"/cabinet/"), render(), "admin" === view && await loadList(), firstPrompt) passwordDialog(!0); else if (selected) {
                         const id = selected;
                         selected = "", openService(id);
                     }
@@ -726,7 +734,7 @@ document.addEventListener("click", e => {
     try {
         {
             const c = await api("config/");
-            csrf = c.csrf, await sync();
+            csrf = c.csrf; giftcardsAdminUrl = c.giftcardsAdminUrl === "/giftcards/#/admin" ? c.giftcardsAdminUrl : ""; await sync();
         }
         render(), location.pathname.startsWith("/admin") ? signed && staff ? (view = "admin", 
         render(), await loadList()) : signed ? $("#app").innerHTML = '<div class="wrap"><div class="panel" style="margin:60px 0"><h1>Доступ ограничен</h1><p>Для входа в этот раздел нужна учётная запись сотрудника.</p><a class="btn" href="/cabinet/">Личный кабинет</a></div></div>' : auth() : location.pathname.startsWith("/register") ? auth("register") : (location.pathname.startsWith("/login") || location.pathname.startsWith("/cabinet") && !signed) ? auth() : location.pathname.startsWith("/reset") ? openModal('<h2>Новый пароль</h2><form id="reset-password-form" class="fields"><div class="field"><label>Новый пароль</label><input name="password" type="password" minlength="12" autocomplete="new-password" required></div><div class="field"><label>Повторите пароль</label><input name="repeat" type="password" minlength="12" autocomplete="new-password" required></div><button class="btn full">Сохранить пароль</button></form>') : signed && firstPrompt && passwordDialog(!0);

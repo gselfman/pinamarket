@@ -19,6 +19,11 @@ header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');header('X-Frame-Options: DENY');header('Referrer-Policy: strict-origin-when-cross-origin');header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
 $path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH)?:'/';
 if(str_starts_with($path,'/api/')){require $appDir.'/api.php';exit;}
+// Existing bookmarks and the previous login must open the current administration.
+// The explicit legacy link retains access to operations created before the switch.
+if(($config['giftcards']['site_mode']??false)&&rtrim($path,'/')==='/admin'&&($_GET['legacy']??'')!=='1'){
+ header('Location: /giftcards/#/admin',true,302);exit;
+}
 if($path==='/giftcards'){header('Location: /giftcards/',true,308);exit;}
 if($path==='/giftcards/'||($path==='/'&&($config['giftcards']['site_mode']??false))){
  if(!($config['giftcards']['enabled']??false)){http_response_code(503);exit('Карточная программа пока не открыта. mail@pina.market');}
