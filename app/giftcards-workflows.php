@@ -24,7 +24,7 @@ function gc_evidence(string $id,string $kind,string $object):array {
 }
 function gc_upload_file(array $d,array $actor):array {
  require_once __DIR__.'/giftcards-documents.php';
- $kind=txt($d,'kind',24);$object=txt($d,'objectId',100);$scope=gc_object_access($kind,$object,$actor);
+ $kind=txt($d,'kind',24);if(($actor['is_staff']??false)&&gc_staff_role($actor)==='support'&&$kind!=='case')throw new ApiError('Поддержка прикладывает документы только к обращениям',403);$object=txt($d,'objectId',100);$scope=gc_object_access($kind,$object,$actor);
  $f=$_FILES['file']??null;
  if(!$f||$f['error']!==UPLOAD_ERR_OK||$f['size']<8||$f['size']>10*1024*1024||!is_uploaded_file($f['tmp_name']))throw new ApiError('Загрузите PDF, PNG, JPG или DOCX до 10 МБ');
  $mime=(new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);$ext='';

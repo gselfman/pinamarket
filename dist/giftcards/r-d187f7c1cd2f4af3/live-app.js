@@ -1,14 +1,14 @@
 // Production controller. The demo controller is disabled by pina-runtime=live.
 // Every financial mutation is authenticated, authorised and persisted by PHP/MySQL.
 import {marketingView,publicLegalCopy,icon,logo,header,footer,btn} from './app.js';
-import {$,esc,money,date,openModal,closeModal,installModalKeys} from './legacy-ui.js';
+import {$,esc,money,date,dateTime,openModal,closeModal,installModalKeys} from './legacy-ui.js';
 import {COMPANY_FIELDS} from './merchant.js';
 import {createAdmin} from './admin.js';
 import {createWorkflows} from './workflows.js';
 let config=null,state=null,currentIssuer='',tab='overview',busy=false,pollTimer=null;
 const API='/api/gift/';
-const adminUi=createAdmin({api,esc,icon,logo,btn,money,date,openModal,closeModal,status,client:()=>state.client,csrf:()=>config.csrf,refreshConfig:async()=>{config=await api('config/');}});
-const workUi=createWorkflows({api,esc,btn,money,date,openModal,closeModal,status,issuer:()=>currentIssuer,client:()=>state.client,refresh:route,download,csrf:()=>config.csrf});
+const adminUi=createAdmin({api,esc,icon,logo,btn,money,date:dateTime,openModal,closeModal,status,client:()=>state.client,csrf:()=>config.csrf,refreshConfig:async()=>{config=await api('config/');}});
+const workUi=createWorkflows({api,esc,btn,money,date:dateTime,openModal,closeModal,status,issuer:()=>currentIssuer,client:()=>state.client,refresh:route,download,csrf:()=>config.csrf});
 async function api(path,data){const response=await fetch(API+path,{method:data===undefined?'GET':'POST',credentials:'same-origin',headers:data===undefined?{}:{'Content-Type':'application/json','X-CSRFToken':config.csrf},...(data===undefined?{}:{body:JSON.stringify(data)})});let result;try{result=await response.json();}catch{throw Error('Не удалось прочитать ответ сервера. Обновите данные перед повтором операции.');}if(!response.ok)throw Object.assign(Error(result.error||result.message||'Операция не выполнена'),{status:response.status});return result;}
 function status(message,error=false){const el=$('#toast');el.textContent=message;el.classList.add('show');el.setAttribute('role',error?'alert':'status');clearTimeout(el.hideTimer);el.hideTimer=setTimeout(()=>el.classList.remove('show'),6000);}
 async function sync(){state=await api('state/');if(!currentIssuer&&state.issuers.length)currentIssuer=state.issuers[0].id;}

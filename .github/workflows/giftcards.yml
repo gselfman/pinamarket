@@ -41,6 +41,8 @@ jobs:
         env:
           PINA_CONFIG: ${{ runner.temp }}/pina-gift-test.php
         run: |
+          cp "$PINA_CONFIG" app/config.php
+          chmod 600 app/config.php
           php -S 127.0.0.1:4174 -t public deploy/router.php > "$RUNNER_TEMP/gift-operations-http.log" 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT

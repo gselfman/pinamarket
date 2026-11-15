@@ -3,8 +3,9 @@
 // The existing PHP API and production wallet are deliberately not used by this prototype.
 export const $ = s => document.querySelector(s);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export const money = n => new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(n||0);
+export const money = n => new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',minimumFractionDigits:0,maximumFractionDigits:2}).format(n||0);
 export const date = s => new Date(s).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric',timeZone:'Europe/Moscow'});
+export const dateTime = s => new Date(s).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',timeZone:'UTC'})+' UTC';
 let lastFocus;const modalStack=[];
 export function openModal(html,title='Диалог Pina Market',wide=false,preserve=false) {
   if(preserve&&!$('#modal').hidden)modalStack.push($('#modal').firstElementChild);

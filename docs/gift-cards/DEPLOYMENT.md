@@ -88,7 +88,7 @@ Supported actions: `bank-confirm/`, `document-approve/`, `issuer-approve/`, `set
 
 Issuer approval requires its current signed contract, configured site/key and programme fields: `nominals` (integer kopecks), HTTPS `rules`, `expires_seconds` up to 31536000, `issue_deadline`, `request_deadline`, `use_country`, `redemption`, `refund`, and `partial_redemption: false`. The supplier’s signed terms and configured programme must agree. A card is redeemed for its full nominal in this version.
 
-A settlement is prepared from explicit confirmed activation IDs, with a UUID request key. Each activation can belong to only one settlement. Staff mark bank credit only after checking the receiving-bank evidence; the supplier then confirms the actual received amount and reference. This acknowledgement does not falsely complete a technical transfer that was not performed.
+A settlement is prepared from explicit confirmed activation IDs, with a UUID request key. Each activation can be reserved for only one active settlement. Cancellation before dispatch releases that reservation while preserving historical registry items. Staff mark bank credit only after checking the receiving-bank evidence; the supplier then confirms the actual received amount and reference. This acknowledgement does not falsely complete a technical transfer that was not performed.
 
 ## Background work and recovery
 
