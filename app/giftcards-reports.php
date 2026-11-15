@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-function gc_report_cell(mixed $value):string {$s=(string)($value??'');if(preg_match('/^[=+@\-\t\r]/',$s))$s="'".$s;return $s;}
+function gc_report_cell(mixed $value):string {$s=(string)($value??'');if(preg_match('/^[\x00-\x20]*[=+@\-]/',$s))$s="'".$s;return $s;}
 function gc_admin_report(array $q,array $actor):never {
  $kind=(string)($q['kind']??'activations');if(!in_array($kind,['orders','cards','payments','activations','settlements','refunds','commands','clients','audit'],true))throw new ApiError('Выберите реестр для выгрузки');
  $items=[];$q['limit']=100;for($page=1;$page<=100;$page++){$q['page']=$page;$r=gc_admin_list($kind,$q);$items=array_merge($items,$r['items']);if($page>=$r['pages'])break;}if($r['total']>10000)throw new ApiError('Более 10 000 строк: сузьте период или выберите одного поставщика');

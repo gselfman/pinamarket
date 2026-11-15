@@ -37,6 +37,19 @@ jobs:
           php tests/giftcards-unit.php
           php tests/giftcards-integration.php
 
+      - name: Verify operational API and private files with real PHP sessions
+        env:
+          PINA_CONFIG: ${{ runner.temp }}/pina-gift-test.php
+        run: |
+          php -S 127.0.0.1:4174 -t public deploy/router.php > "$RUNNER_TEMP/gift-operations-http.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4174/api/health/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/giftcards-operations-http.mjs
+
       - name: Verify buyer and supplier interfaces
         env:
           PINA_PLAYWRIGHT: ${{ runner.temp }}/pina-gift-ui/node_modules/playwright
