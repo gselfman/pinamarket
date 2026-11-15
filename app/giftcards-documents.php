@@ -4,8 +4,10 @@ function gc_storage():string {
  $dir=gc_settings()['storage_path']??'';
  if(!is_string($dir)||$dir===''||$dir[0]!=='/'||is_link($dir))throw new RuntimeException('PRIVATE_DOCUMENT_STORAGE_REQUIRED');
  if(!is_dir($dir)&&!mkdir($dir,0700,true))throw new RuntimeException('DOCUMENT_STORAGE_UNAVAILABLE');
- $real=realpath($dir);$web=realpath($_SERVER['DOCUMENT_ROOT']??'/nonexistent');
- if($real===false||($web!==false&&str_starts_with($real.'/',rtrim($web,'/').'/')))throw new RuntimeException('DOCUMENT_STORAGE_MUST_BE_PRIVATE');
+ $real=realpath($dir);if($real===false)throw new RuntimeException('DOCUMENT_STORAGE_MUST_BE_PRIVATE');
+ // CLI sets DOCUMENT_ROOT to an empty string; realpath('') incorrectly means cwd.
+ $webRoots=[cfg()['public_dir']??''];if(PHP_SAPI!=='cli')$webRoots[]=$_SERVER['DOCUMENT_ROOT']??'';
+ foreach($webRoots as $webRoot){if(!is_string($webRoot)||$webRoot==='')continue;$web=realpath($webRoot);if($web!==false&&str_starts_with($real.'/',rtrim($web,'/').'/'))throw new RuntimeException('DOCUMENT_STORAGE_MUST_BE_PRIVATE');}
  chmod($real,0700);return $real;
 }
 function gc_document_route(string $route,string $method,array $d,array $actor):mixed {
