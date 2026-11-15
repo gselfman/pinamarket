@@ -43,7 +43,7 @@ jobs:
         run: |
           cp "$PINA_CONFIG" app/config.php
           chmod 600 app/config.php
-          php -S 127.0.0.1:4174 -t public deploy/router.php > "$RUNNER_TEMP/gift-operations-http.log" 2>&1 &
+          php -d upload_max_filesize=10M -d post_max_size=12M -S 127.0.0.1:4174 -t public deploy/router.php > "$RUNNER_TEMP/gift-operations-http.log" 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for attempt in $(seq 1 30); do
