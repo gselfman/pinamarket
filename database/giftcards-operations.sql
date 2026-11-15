@@ -56,3 +56,8 @@ CREATE TABLE IF NOT EXISTS pg_contacts (
  client_id BIGINT UNSIGNED PRIMARY KEY, full_name VARCHAR(180) NOT NULL, phone VARCHAR(60) NOT NULL, updated_at DATETIME NOT NULL,
  FOREIGN KEY(client_id) REFERENCES pm_clients(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS pg_refund_recoveries (
+ id CHAR(36) PRIMARY KEY, refund_id CHAR(36) NOT NULL, amount_minor BIGINT NOT NULL, reference VARCHAR(150) NOT NULL UNIQUE,
+ evidence_id CHAR(36) NOT NULL, body TEXT NOT NULL, actor_id BIGINT UNSIGNED NOT NULL, created_at DATETIME NOT NULL,
+ FOREIGN KEY(refund_id) REFERENCES pg_refunds(id), FOREIGN KEY(evidence_id) REFERENCES pg_files(id), FOREIGN KEY(actor_id) REFERENCES pm_clients(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

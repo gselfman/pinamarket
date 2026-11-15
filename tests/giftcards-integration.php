@@ -21,7 +21,7 @@ foreach([[1000,'staff@example.com',1],[1014,'buyer@example.com',0],[1027,'suppli
 query("UPDATE pm_counters SET value=1040 WHERE name='client'");
 $issuer='11111111-1111-4111-8111-111111111111';$site='22222222-2222-4222-8222-222222222222';
 $company=['name'=>'Test Supplier','reg'=>'TEST','tax'=>'TEST','address'=>'Test address','email'=>'supplier@example.com'];
-$program=['nominals'=>[1000000,5000000],'rules'=>'https://example.com/rules','expires_seconds'=>15552000,'issue_deadline'=>'1 day','request_deadline'=>'1 year','use_country'=>'KG','redemption'=>'Full nominal','refund'=>'Offer terms','partial_redemption'=>false];
+$program=['fulfillment_address'=>'Bishkek, disposable test showroom','delivery_to_rf'=>false,'digital_services'=>false,'nominals'=>[1000000,5000000],'rules'=>'https://example.com/rules','expires_seconds'=>15552000,'issue_deadline'=>'1 day','request_deadline'=>'1 year','use_country'=>'KG','redemption'=>'Full nominal','refund'=>'Offer terms','partial_redemption'=>false];
 query("INSERT INTO pg_issuers(id,name,company_json,program_json,status,vdar_site_id,recipient_login,contract_status,created_at,updated_at) VALUES(?,?,?,?,'active',?,?,'approved',?,?)",[$issuer,'Test Supplier',json_encode($company),json_encode($program),$site,'supplier.point',now(),now()]);query("INSERT INTO pg_issuer_members(issuer_id,client_id,role) VALUES(?,1027,'owner')",[$issuer]);
 $codes=[];$providerCalls=[];$seq=0;$uncertainNext=false;
 $GLOBALS['gc_test_provider']=function(?string $merchant)use(&$codes,&$providerCalls,&$seq,&$uncertainNext,$site):VdarClient {
