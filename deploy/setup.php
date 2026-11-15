@@ -120,9 +120,11 @@ try{
  put_private($releaseApp.'/config.php',"<?php\nreturn ".var_export($config,true).";\n");
  put_private($releaseApp.'/template.html',$html);
  $assetNames=['app.js','legal.js','style.css','pina-logo.png','favicon.ico'];foreach(array_merge(glob($root.'/dist/brand-*.png'),glob($root.'/dist/brand-*.svg'),glob($root.'/dist/favicon-*.png'),glob($root.'/dist/apple-touch-icon-*.png')) as $brandFile)$assetNames[]=basename($brandFile);
+ if(is_dir($root.'/dist/giftcards')){foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root.'/dist/giftcards',FilesystemIterator::SKIP_DOTS)) as $file)if($file->isFile())$assetNames[]='giftcards/'.substr($file->getPathname(),strlen($root.'/dist/giftcards/'));}
  $oldAssetNames=array_values(array_filter($assetNames,fn($name)=>is_file($public.'/'.$name)));
  $assetHashes=[];foreach($assetNames as $asset)$assetHashes[$asset]=hash_file('sha256',$root.'/dist/'.$asset);
  put_private($releaseApp.'/release.json',json_encode(['id'=>$stamp,'assets'=>$assetHashes],JSON_THROW_ON_ERROR));
+ if(is_dir($root.'/dist/giftcards'))copy_tree($root.'/dist/giftcards',$publishDir.'/giftcards');
  foreach($assetNames as $asset)copy_file($root.'/dist/'.$asset,$publishDir.'/'.$asset);
  foreach(['.htaccess','.user.ini'] as $asset)copy_file($root.'/public/'.$asset,$publishDir.'/'.$asset);
  if($fcgiWrapper!==''){
@@ -138,7 +140,7 @@ try{
  out('Файлы установлены. Админка: '.$config['base_url'].'/admin/');
  out('Проверка HTTPS и серверного приложения:');
  require_once __DIR__.'/verify.php';
- $verifyError=null;try{$checked=verify_site($config['base_url'],$stamp,$assetHashes);foreach($checked as $route)out('OK '.$route);}catch(Throwable $error){$verifyError=$error->getMessage();}
+ $verifyError=null;try{$checked=verify_site($config['base_url'],$stamp,$assetHashes,(bool)($config['giftcards']['enabled']??false));foreach($checked as $route)out('OK '.$route);}catch(Throwable $error){$verifyError=$error->getMessage();}
  if($verifyError!==null){
   out($verifyError);
   if($initialPublish&&isset($previous)&&is_dir($previous)){$failed=dirname($public).'/.pinamarket-failed-'.$stamp;if(rename($public,$failed)&&rename($previous,$public))throw new RuntimeException('HTTPS-проверка не прошла. Прежний сайт восстановлен. Проверьте SSL, DNS и путь каталога, затем повторите с --update. Настройки и база сохранены.');}

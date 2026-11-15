@@ -30,7 +30,26 @@ jobs:
         env:
           PINA_CONFIG: ${{ runner.temp }}/pina-gift-test.php
         run: |
-          php -r '$c=["base_url"=>"https://pina.test","debug"=>true,"db"=>["host"=>"127.0.0.1","port"=>3306,"name"=>"pina_gift_test","user"=>"root","password"=>"local-test-only"]];file_put_contents(getenv("PINA_CONFIG"),"<?php return ".var_export($c,true).";");'
+          php -r '$c=["base_url"=>"https://pina.test","debug"=>true,"db"=>["host"=>"127.0.0.1","port"=>3306,"name"=>"pina_gift_test","user"=>"root","password"=>"local-test-only"],"giftcards"=>["enabled"=>true,"sales_enabled"=>true,"balance_return_mode"=>"manual","encryption_key"=>base64_encode(str_repeat("test",8)),"storage_path"=>getenv("RUNNER_TEMP")."/pina-documents"]];file_put_contents(getenv("PINA_CONFIG"),"<?php return ".var_export($c,true).";");'
           php -r 'require "app/bootstrap.php";foreach(explode(";",file_get_contents("database/schema.sql")) as $sql)if(trim($sql)!=="")db()->exec($sql);'
           php deploy/giftcards-migrate.php --apply
           php deploy/giftcards-migrate.php --apply
+          php tests/giftcards-unit.php
+          php tests/giftcards-integration.php
+
+      - name: Verify buyer and supplier interfaces
+        env:
+          PINA_PLAYWRIGHT: ${{ runner.temp }}/pina-gift-ui/node_modules/playwright
+          PINA_ARTIFACT_DIR: ${{ runner.temp }}
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pina-gift-ui" playwright@1.61.0
+          "$RUNNER_TEMP/pina-gift-ui/node_modules/.bin/playwright" install --with-deps chromium
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory prototype > "$RUNNER_TEMP/pina-gift-http.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node prototype/tests/browser.cjs
+          node tests/giftcards-live.cjs

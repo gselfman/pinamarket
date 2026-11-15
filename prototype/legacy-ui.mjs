@@ -21,6 +21,7 @@ export function closeModal(force=false) {
   if(lastFocus?.isConnected) lastFocus.focus();
 }
 export function installModalKeys() {
+  document.querySelector('.skip-link')?.addEventListener('click',e=>{e.preventDefault();const main=document.querySelector('main');if(main){main.tabIndex=-1;main.focus();main.scrollIntoView({block:'start'});}});
   document.addEventListener('keydown',e=>{
     if($('#modal').hidden) return;
     if(e.key==='Escape') closeModal();

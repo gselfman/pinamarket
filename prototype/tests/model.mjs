@@ -16,7 +16,7 @@ acceptMerchantCode(s,{code,buyer:'Демо Покупатель',contract:'№ 1
 assert.throws(()=>acknowledgeSettlement(s,{ids:[c.id],amount:9910,bankref:'test'}),/не готова/);
 transition(s,'settle',o.id);assert.equal(o.settlement,'partial');assert.equal(o.cards[1].settlement,undefined);
 assert.throws(()=>acknowledgeSettlement(s,{ids:[c.id],amount:100,bankref:'test'}),/не совпадает/);
-acknowledgeSettlement(s,{ids:[c.id],amount:9910,bankref:'test'});assert.equal(c.releasedToPina,true);assert.throws(()=>acknowledgeSettlement(s,{ids:[c.id],amount:9910,bankref:'test'}),/изменился/);
+acknowledgeSettlement(s,{ids:[c.id],amount:9910,bankref:'test'});assert.equal(c.settlementConfirmed,true);assert.equal(c.releasedToPina,undefined);assert.equal(s.merchant.acks[0].balanceReview,'manual_review');assert.throws(()=>acknowledgeSettlement(s,{ids:[c.id],amount:9910,bankref:'test'}),/изменился/);
 const c2=o.cards[1];transition(s,'request_refund',c2.id,{reason:'Неиспользованная карта для тестового возврата'});assert.throws(()=>transition(s,'issue',c2.id),/приостановлены/);transition(s,'complete_refund',c2.id);assert.equal(cardStatus(o,c2)[0],'returned');
 transition(s,'request_refund',c.id,{reason:'Поставщик не выполнил услугу по договору'});assert.equal(c.refund,'requested');assert.throws(()=>transition(s,'complete_refund',c.id),/отдельная проверка/);
 assert.ok(!registryCSV(s).includes(code));assert.ok(merchantTotals(s).balance>=0);

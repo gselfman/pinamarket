@@ -4,7 +4,7 @@ require_once __DIR__.'/giftcards.php';
 function gc_run_one():bool {
  $command=transact(function(){
   $r=one("SELECT * FROM pg_commands WHERE status='queued' ORDER BY created_at,id LIMIT 1 FOR UPDATE");if(!$r)return null;
-  query("UPDATE pg_commands SET status='sending',claimed_at=? WHERE id=?",[now(),$r['id']]);return $r;
+  query("UPDATE pg_commands SET status='sending',attempts=attempts+1,claimed_at=? WHERE id=?",[now(),$r['id']]);return $r;
  });
  if(!$command)return false;
  $id=$command['card_id'];$kind=$command['kind'];
@@ -16,21 +16,22 @@ function gc_run_one():bool {
    // remains a claim against an issued card; it never causes an untracked second issue.
    if($card['refund_status']!=='none')throw new VdarRejected('REFUND_PENDING');
    $snapshot=json_decode($card['snapshot_json'],true,512,JSON_THROW_ON_ERROR);
-   $recipient=$issuer['recipient_login'];if(!$recipient)throw new RuntimeException('RECIPIENT_NOT_CONFIGURED');
+   $recipient=$snapshot['vdar_recipient']??null;if(!$recipient)throw new RuntimeException('RECIPIENT_NOT_CONFIGURED');
    $expires=(int)($snapshot['program']['expires_seconds']??0);
    $result=gc_provider()->generate((int)$card['nominal_minor'],'PINA-'.$id,$recipient,$card['payment_id'],$expires);
    $encrypted=gc_encrypt($result['code']);$codeHash=gc_code_hash($result['code']);
-   transact(function()use($id,$result,$command,$encrypted,$codeHash){query("UPDATE pg_cards SET issuance_status='issued',provider_id=?,code_ciphertext=?,code_hash=?,expires_at=?,updated_at=? WHERE id=?",[$result['id'],$encrypted,$codeHash,!empty($result['expires_at'])?gmdate('Y-m-d H:i:s',strtotime($result['expires_at'])):null,now(),$id]);query("UPDATE pg_commands SET status='completed',completed_at=? WHERE id=?",[now(),$command['id']]);audit(null,'gift_code_created',$id);});
+   transact(function()use($id,$result,$command,$encrypted,$codeHash){query("UPDATE pg_cards SET issuance_status='issued',provider_id=?,code_ciphertext=?,code_hash=?,expires_at=?,updated_at=? WHERE id=?",[$result['id'],$encrypted,$codeHash,!empty($result['expires_at'])?gmdate('Y-m-d H:i:s',strtotime($result['expires_at'])):null,now(),$id]);query("UPDATE pg_commands SET status='completed',completed_at=? WHERE id=?",[now(),$command['id']]);gc_card_mail($id,'Код карты Pina Market готов','Доступ к коду открыт в личном кабинете. Передавайте код только выбранному поставщику.');audit(null,'gift_code_created',$id);});
   }elseif($kind==='activate'){
    $activation=one('SELECT * FROM pg_activations WHERE id=?',[$command['activation_id']]);
    if(!$activation||$activation['issuer_id']!==$card['issuer_id'])throw new RuntimeException('ACTIVATION_MISMATCH');
    if($card['refund_status']!=='none')throw new VdarRejected('REFUND_PENDING');
    $code=gc_decrypt($card['code_ciphertext']);$provider=gc_provider($card['issuer_id']);$info=$provider->check($code);
+   if(($info['status']??'')==='activated')throw new VdarUncertain('EXTERNAL_ACTIVATION_REQUIRES_RECONCILIATION');
    if(($info['exists']??false)!==true||($info['is_valid']??false)!==true||($info['recipient_login']??'')!==$issuer['recipient_login']||($info['currency_code']??'')!=='RUB'||VdarClient::minor($info['amount']??'0')!==(int)$card['nominal_minor'])throw new VdarRejected('CODE_NOT_VALID_FOR_ISSUER');
    $result=$provider->activate($code);
    if(VdarClient::minor($result['activated_amount']??'0')!==(int)$card['nominal_minor'])throw new VdarUncertain('ACTIVATION_AMOUNT_MISMATCH');
    $commission=VdarClient::minor($result['commission_charged']??'0');
-   transact(function()use($id,$result,$command,$commission){query("UPDATE pg_cards SET redemption_status='redeemed',updated_at=? WHERE id=?",[now(),$id]);query("UPDATE pg_activations SET status='confirmed',provider_operation_id=?,provider_commission_minor=?,activated_at=? WHERE id=?",[$result['operation_id'],$commission,!empty($result['activated_at'])?gmdate('Y-m-d H:i:s',strtotime($result['activated_at'])):now(),$command['activation_id']]);query("UPDATE pg_commands SET status='completed',completed_at=? WHERE id=?",[now(),$command['id']]);audit(null,'gift_code_activated',$id);});
+   transact(function()use($id,$result,$command,$commission){query("UPDATE pg_cards SET redemption_status='redeemed',updated_at=? WHERE id=?",[now(),$id]);query("UPDATE pg_activations SET status='confirmed',provider_operation_id=?,provider_commission_minor=?,activated_at=? WHERE id=?",[$result['operation_id'],$commission,!empty($result['activated_at'])?gmdate('Y-m-d H:i:s',strtotime($result['activated_at'])):now(),$command['activation_id']]);query("UPDATE pg_commands SET status='completed',completed_at=? WHERE id=?",[now(),$command['id']]);gc_card_mail($id,'Поставщик принял карту','Поставщик подтвердил приём карты в счёт вашего договора или заказа. Это не подтверждение передачи товара или оказания услуги.');audit(null,'gift_code_activated',$id);});
   }elseif($kind==='cancel'){
    if($card['refund_status']!=='requested'||$card['redemption_status']!=='not_redeemed'||$card['issuance_status']!=='issued')throw new VdarRejected('CANCELLATION_NOT_ALLOWED');
    $result=gc_provider()->cancel(gc_decrypt($card['code_ciphertext']));if(($result['success']??false)!==true)throw new VdarUncertain('CANCELLATION_UNKNOWN');
