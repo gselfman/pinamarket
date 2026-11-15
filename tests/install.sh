@@ -111,3 +111,81 @@ cp "$PINA_INSTALL_TEMP/original-config.php" "$PINA_INSTALL_TEMP/code/app/config.
 curl --noproxy '*' --silent --fail https://pina.install.test/api/health/ | grep -q '\"status\":\"ok\"'
 php -r 'require $argv[1];$r=deployment_http_get("https://unavailable.pina.invalid/");if($r["status"]!==0||!str_contains($r["error"],"curl (код ")||!str_contains($r["error"],"PHP HTTPS:"))exit(1);echo "PASS: both HTTPS transport errors retain diagnostic detail\n";' "$PINA_INSTALL_TEMP/code/deploy/verify.php"
 echo 'PASS: actual Apache FastCGI, public files readable under umask 077, private config restricted, clean CLI installation, verified TLS/SMTP, legacy-site replacement, SSL-token preservation repeat update and rollback after failed HTTPS check'
+
+# Exercise the exact upgrade used by the remote gift-card installer on real Apache/MySQL.
+mkdir "$PINA_INSTALL_TEMP/giftcode"
+git archive HEAD | tar -xf - -C "$PINA_INSTALL_TEMP/giftcode"
+export PINA_PHP_BIN="$(command -v php)" PINA_OLD_CODE_DIR="$PINA_INSTALL_TEMP/code"
+export PINA_GIFT_VDAR_CONFIG="$PINA_INSTALL_TEMP/no-provider-key.json"
+old_pointer="$(cat "$PINA_INSTALL_TEMP/htdocs/pina-path.json")"
+old_index_hash="$(sha256sum "$PINA_INSTALL_TEMP/htdocs/index.php" | cut -d' ' -f1)"
+bash "$PINA_INSTALL_TEMP/giftcode/deploy/giftcards-hosting.sh" --check
+[[ ! -f "$PINA_INSTALL_TEMP/giftcode/app/config.php" ]]
+[[ "$(cat "$PINA_INSTALL_TEMP/htdocs/pina-path.json")" == "$old_pointer" ]]
+mkdir "$PINA_INSTALL_TEMP/htdocs/V0"
+printf 'DO NOT OVERWRITE' > "$PINA_INSTALL_TEMP/htdocs/V0/keep.txt"
+if bash "$PINA_INSTALL_TEMP/giftcode/deploy/giftcards-hosting.sh" --deploy; then echo 'Expected refusal for pre-existing unowned V0' >&2; exit 1; fi
+[[ "$(cat "$PINA_INSTALL_TEMP/htdocs/V0/keep.txt")" == 'DO NOT OVERWRITE' ]]
+rm "$PINA_INSTALL_TEMP/htdocs/V0/keep.txt"
+rmdir "$PINA_INSTALL_TEMP/htdocs/V0"
+# With an invalid shell, checked HTTPS must fail and restore the old directory.
+cp "$PINA_INSTALL_TEMP/giftcode/app/giftcards-shell.html" "$PINA_INSTALL_TEMP/gift-shell-good.html"
+printf '<html>invalid release</html>' > "$PINA_INSTALL_TEMP/giftcode/app/giftcards-shell.html"
+if bash "$PINA_INSTALL_TEMP/giftcode/deploy/giftcards-hosting.sh" --deploy; then echo 'Expected gift-card verification failure' >&2; exit 1; fi
+[[ "$(cat "$PINA_INSTALL_TEMP/htdocs/pina-path.json")" == "$old_pointer" ]]
+[[ ! -d "$PINA_INSTALL_TEMP/htdocs/V0" ]]
+curl --noproxy '*' --silent --fail https://pina.install.test/api/health/ | grep -q '"status":"ok"'
+# A new immutable checkout is used on every retry; previous config/backups are retained.
+mkdir "$PINA_INSTALL_TEMP/giftcode-good"
+git archive HEAD | tar -xf - -C "$PINA_INSTALL_TEMP/giftcode-good"
+PINA_CRON_STUB="$PINA_INSTALL_TEMP/cron-bin"
+mkdir "$PINA_CRON_STUB"
+cat > "$PINA_CRON_STUB/crontab" <<'STUB'
+#!/bin/bash
+if [[ "$1" == '-l' ]]; then cat "$PINA_CRON_TEST_STORE"; else cp "$1" "$PINA_CRON_TEST_STORE"; fi
+STUB
+chmod +x "$PINA_CRON_STUB/crontab"
+export PINA_CRON_TEST_STORE="$PINA_INSTALL_TEMP/cron-store"
+printf '0 1 * * * /some/unrelated-backup\n' > "$PINA_CRON_TEST_STORE"
+export PINA_GIFT_VDAR_CONFIG="$PINA_INSTALL_TEMP/private-vdar.json"
+printf '%s' '{"merchant_id":"33333333-3333-4333-8333-333333333333","site_id":"44444444-4444-4444-8444-444444444444","recipient_login":"ci.point","api_key":"ci-private-key-only"}' > "$PINA_GIFT_VDAR_CONFIG"
+chmod 0600 "$PINA_GIFT_VDAR_CONFIG"
+PATH="$PINA_CRON_STUB:$PATH" bash "$PINA_INSTALL_TEMP/giftcode-good/deploy/giftcards-hosting.sh" --deploy
+[[ -f "$PINA_INSTALL_TEMP/htdocs/V0/.pina-v0-archive" ]]
+[[ "$(sha256sum "$PINA_INSTALL_TEMP/htdocs/V0/index.php" | cut -d' ' -f1)" == "$old_index_hash" ]]
+[[ "$(cat "$PINA_INSTALL_TEMP/htdocs/V0/pina-path.json")" == "$old_pointer" ]]
+[[ "$(stat -c %a "$PINA_INSTALL_TEMP/htdocs/V0")" == 700 ]]
+for archived in /V0/ /V0/index.php /V0/app.js /V0/pina-path.json; do
+ [[ "$(curl --noproxy '*' --silent -o /dev/null -w '%{http_code}' "https://pina.install.test$archived")" == 403 ]]
+done
+curl --noproxy '*' --silent --fail https://pina.install.test/ | grep -q 'pina-runtime'
+[[ "$(cat "$PINA_INSTALL_TEMP/htdocs/.well-known/token.txt")" == 'CERTIFICATE TOKEN' ]]
+php -r '$c=require $argv[1];if(!$c["giftcards"]["site_mode"]||$c["giftcards"]["sales_enabled"]||$c["giftcards"]["balance_return_mode"]!=="manual")exit(1);' "$PINA_INSTALL_TEMP/giftcode-good/app/config.php"
+php -r '$c=require $argv[1];if(($c["giftcards"]["pina"]["merchant_id"]??"")!=="33333333-3333-4333-8333-333333333333"||($c["giftcards"]["pina"]["recipient_login"]??"")!=="ci.point")exit(1);' "$PINA_INSTALL_TEMP/giftcode-good/app/config.php"
+[[ $(grep -c 'pina-market-mail$' "$PINA_CRON_TEST_STORE") == 1 ]]
+[[ $(grep -c 'pina-market-giftcards$' "$PINA_CRON_TEST_STORE") == 1 ]]
+grep -q 'unrelated-backup' "$PINA_CRON_TEST_STORE"
+# Repeat installation must preserve the first V0 archive and the encryption key.
+mkdir "$PINA_INSTALL_TEMP/giftcode-repeat"
+git archive HEAD | tar -xf - -C "$PINA_INSTALL_TEMP/giftcode-repeat"
+PATH="$PINA_CRON_STUB:$PATH" bash "$PINA_INSTALL_TEMP/giftcode-repeat/deploy/giftcards-hosting.sh" --deploy
+[[ "$(cat "$PINA_INSTALL_TEMP/htdocs/V0/pina-path.json")" == "$old_pointer" ]]
+php -r '$a=require $argv[1];$b=require $argv[2];if($a["giftcards"]["encryption_key"]!==$b["giftcards"]["encryption_key"]||$a["db"]!==$b["db"])exit(1);' "$PINA_INSTALL_TEMP/giftcode-good/app/config.php" "$PINA_INSTALL_TEMP/giftcode-repeat/app/config.php"
+echo 'PASS: exact gift-card hosting upgrade, read-only precheck, foreign-V0 refusal, failed-switch rollback, private V0 preservation, homepage switch, repeat deployment, unchanged DB/key and deduplicated cron'
+# Exercise the browser controller's exact CSRF header against the deployed PHP endpoint.
+python3 - <<'PY'
+import json,urllib.request,urllib.error,http.cookiejar
+base='https://pina.install.test'
+cookies=http.cookiejar.CookieJar()
+opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookies),urllib.request.ProxyHandler({}))
+config=json.load(opener.open(base+'/api/gift/config/'))
+payload=json.dumps({'company':'CI supplier','contact':'CI contact','email':'ci@example.com','country':'KG','activity':'CI enquiry only','consent':True}).encode()
+def post(headers):
+ try:
+  with opener.open(urllib.request.Request(base+'/api/gift/enquiries/',data=payload,headers={'Content-Type':'application/json','Origin':base,**headers})) as r:return r.status,json.load(r)
+ except urllib.error.HTTPError as e:return e.code,json.load(e)
+assert post({})[0]==403
+status,body=post({'X-CSRFToken':config['csrf']})
+assert status==200 and body.get('id'),(status,body)
+print('PASS: deployed gift-card PHP API accepts the browser CSRF header and rejects a missing token')
+PY

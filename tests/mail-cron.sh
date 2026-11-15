@@ -14,3 +14,11 @@ PATH="$pina_cron_test:$PATH" bash deploy/mail-cron.sh >/dev/null
 grep -q '/some/backup' "$PINA_CRON_TEST_STORE"
 grep -q 'pina-market-mail' "$PINA_CRON_TEST_STORE"
 echo 'PASS: cron preserves existing jobs and installs only once'
+
+PATH="$pina_cron_test:$PATH" bash deploy/giftcards-cron.sh >/dev/null
+PATH="$pina_cron_test:$PATH" bash deploy/giftcards-cron.sh >/dev/null
+[[ $(wc -l < "$PINA_CRON_TEST_STORE") == 3 ]]
+[[ $(grep -c 'pina-market-mail$' "$PINA_CRON_TEST_STORE") == 1 ]]
+[[ $(grep -c 'pina-market-giftcards$' "$PINA_CRON_TEST_STORE") == 1 ]]
+grep -q '/some/backup' "$PINA_CRON_TEST_STORE"
+echo 'PASS: gift-card and mail jobs replace old paths once and preserve unrelated cron'

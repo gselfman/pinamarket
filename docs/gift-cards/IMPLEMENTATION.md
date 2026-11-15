@@ -47,7 +47,7 @@ The retrieved OpenAPI has no direct merchant-to-merchant balance-transfer endpoi
 
 ## Storage and security
 
-`database/giftcards.sql` adds 19 `pg_*` tables. It does not change the original wallet ledger. Money is stored as integer kopecks; API decimal strings are converted without floating-point financial arithmetic on the server. Codes use AES-256-GCM at rest and a keyed lookup index. Full codes are excluded from registries, ordinary audit records and email notifications.
+`database/giftcards.sql` adds 19 `pg_*` tables; `giftcards-credentials.sql` adds the twentieth table for encrypted, issuer-specific merchant settings. It does not change the original wallet ledger. Money is stored as integer kopecks; API decimal strings are converted without floating-point financial arithmetic on the server. Codes use AES-256-GCM at rest and a keyed lookup index. Full codes are excluded from registries, ordinary audit records and email notifications.
 
 The module reuses existing server sessions, CSRF protection, rate limits and staff permissions. Supplier membership is checked on every company operation. API keys, encryption key, uploaded contracts, signature and backups belong in private configuration/storage; never in browser scripts or Git. Keep the encryption key backed up with the database: replacing it would make existing codes unreadable.
 

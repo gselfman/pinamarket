@@ -1,7 +1,7 @@
 // The real signing service, numbering and signature key must live on the server.
 // This browser generator produces a clearly numbered DEMO draft from the agreed Word template.
 export async function generateContract(company,record) {
- const source=await fetch('/giftcards/r-864298c0c18d605b/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
+ const source=await fetch('/giftcards/r-bb3e8b1c9d1f0d29/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
  const zip=await window.JSZip.loadAsync(await source.arrayBuffer()),path='word/document.xml',xml=await zip.file(path).async('string'),doc=new DOMParser().parseFromString(xml,'application/xml'),ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
  if(doc.querySelector('parsererror'))throw Error('Не удалось прочитать шаблон.');
  const text=e=>[...e.getElementsByTagNameNS(ns,'t')].map(n=>n.textContent).join('');
