@@ -1,0 +1,36 @@
+name: Gift cards prototype and integration
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: local-test-only
+          MYSQL_DATABASE: pina_gift_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -plocal-test-only"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, mbstring, openssl, curl, dom, zip, fileinfo
+          coverage: none
+      - run: find app deploy tests -name '*.php' -print0 | xargs -0 -n1 php -l
+      - run: php tests/vdar.php
+      - run: node prototype/tests/model.mjs
+      - run: node --check prototype/app.js && node --check prototype/merchant.mjs && node --check prototype/contracts.mjs
+      - name: Verify migration on actual MySQL
+        env:
+          PINA_CONFIG: ${{ runner.temp }}/pina-gift-test.php
+        run: |
+          php -r '$c=["base_url"=>"https://pina.test","debug"=>true,"db"=>["host"=>"127.0.0.1","port"=>3306,"name"=>"pina_gift_test","user"=>"root","password"=>"local-test-only"]];file_put_contents(getenv("PINA_CONFIG"),"<?php return ".var_export($c,true).";");'
+          php -r 'require "app/bootstrap.php";foreach(explode(";",file_get_contents("database/schema.sql")) as $sql)if(trim($sql)!=="")db()->exec($sql);'
+          php deploy/giftcards-migrate.php --apply
+          php deploy/giftcards-migrate.php --apply

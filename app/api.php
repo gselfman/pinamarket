@@ -5,8 +5,9 @@ require_once __DIR__.'/notifications.php';
 if(!function_exists('send_message')) require_once __DIR__.'/mail.php';
 header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');header('X-Frame-Options: DENY');
 function api_route(string $route,string $method):mixed {
- $post=$method==='POST';$get=$method==='GET';$d=$post?input():[];
+ $post=$method==='POST';$get=$method==='GET';$upload=$route==='gift/documents/upload/';$d=$post?($upload?$_POST:input()):[];
  if($post)csrf_check();
+ if(str_starts_with($route,'gift/')){require_once __DIR__.'/giftcards.php';return giftcards_route(substr($route,5),$method,$d);}
  if($route==='config/'&&$get)return ['csrf'=>$_SESSION['csrf'],'legalVersion'=>legal_data()['version']]+site_settings();
  if($route==='health/'&&$get){one('SELECT value FROM pm_counters WHERE name=?',['operation']);$release=is_file(__DIR__.'/release.json')?json_decode(file_get_contents(__DIR__.'/release.json'),true):[];return ['status'=>'ok','release'=>$release['id']??'source'];}
  if($route==='register/'&&$post){
