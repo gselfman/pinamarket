@@ -64,3 +64,11 @@ function gc_reconcile_issue(string $cardId):array {
  transact(function()use($cardId,$item,$info,$command){query("UPDATE pg_cards SET issuance_status='issued',provider_id=?,code_ciphertext=?,code_hash=?,expires_at=?,updated_at=? WHERE id=?",[$item['id'],gc_encrypt($item['code']),gc_code_hash($item['code']),!empty($info['expires_at'])?gmdate('Y-m-d H:i:s',strtotime($info['expires_at'])):null,now(),$cardId]);query("UPDATE pg_commands SET status='completed',completed_at=?,error_code=NULL WHERE id=?",[now(),$command['id']]);audit(null,'gift_issue_reconciled',$cardId);});
  return ['status'=>'issued'];
 }
+// Recover a timed-out cancellation by reading the original code only. Never DELETE twice.
+function gc_reconcile_cancel(string $id,array $actor):array {
+ $c=gc_card($id);$q=one("SELECT * FROM pg_commands WHERE card_id=? AND kind='cancel'",[$id]);
+ if(!$q||!in_array($q['status'],['unknown','sending'],true)||$c['redemption_status']!=='not_redeemed'||!in_array($c['refund_status'],['requested','review','approved','awaiting_issuer'],true))throw new ApiError('Нет неопределённого аннулирования неиспользованной карты',409);
+ $r=gc_provider()->check(gc_decrypt($c['code_ciphertext']));
+ if(($r['exists']??false)!==true||($r['status']??'')!=='deactivated'||($r['currency_code']??'')!=='RUB'||VdarClient::minor($r['amount']??'0')!==(int)$c['nominal_minor']||($r['payment_id']??'')!==$c['payment_id'])return ['status'=>'unknown'];
+ return transact(function()use($c,$q,$actor){$card=one('SELECT * FROM pg_cards WHERE id=? FOR UPDATE',[$c['id']]);$cmd=one('SELECT * FROM pg_commands WHERE id=? FOR UPDATE',[$q['id']]);if($card['redemption_status']!=='not_redeemed'||!in_array($cmd['status'],['unknown','sending'],true))throw new ApiError('Данные изменились; обновите карточку',409);query("UPDATE pg_cards SET issuance_status='cancelled',updated_at=? WHERE id=?",[now(),$c['id']]);query("UPDATE pg_commands SET status='completed',error_code=NULL,completed_at=? WHERE id=?",[now(),$q['id']]);audit((int)$actor['id'],'gift_cancellation_reconciled',$c['id']);return ['status'=>'cancelled'];});
+}

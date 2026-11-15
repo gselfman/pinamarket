@@ -11,7 +11,7 @@ function gc_admin_guard(string $route,string $method,array $actor):void {
  $permissions=[
   'support'=>['note/','case-save/','enquiry-update/','evidence-upload/'],
   'operator'=>['note/','case-save/','enquiry-update/','client-create/','order-create/','payment-record/','payment-assign/','bank-confirm/','bank-import/','card-issue/','issue-reconcile/','retry-safe-command/','supplier-save/','program-save/','document-reject/','documents-prepare/','evidence-upload/'],
-  'finance'=>['note/','case-save/','enquiry-update/','payment-record/','payment-assign/','bank-confirm/','bank-import/','settlement-prepare/','settlement-bank-credit/','settlement-event/','balance-reconcile/','refund-cancel-code/','refund-paid/','refund-resolve/','refund-recovery/','issue-reconcile/','retry-safe-command/','evidence-upload/','settlement-request-review/']
+  'finance'=>['note/','case-save/','enquiry-update/','payment-record/','payment-assign/','bank-confirm/','bank-import/','settlement-prepare/','settlement-bank-credit/','settlement-event/','balance-reconcile/','refund-cancel-code/','refund-paid/','refund-resolve/','refund-recovery/','cancel-reconcile/','issue-reconcile/','retry-safe-command/','evidence-upload/','settlement-request-review/']
  ];
  if($role!=='admin'&&!in_array($route,$permissions[$role]??[],true))throw new ApiError('Для этого действия недостаточно полномочий',403);
  if($route!=='reauth/'&&PHP_SAPI!=='cli'&&(int)($_SESSION['gift_staff_reauth']??0)<time())throw new ApiError('Подтвердите пароль сотрудника для выполнения действий',428);
