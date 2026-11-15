@@ -2,7 +2,7 @@
 declare(strict_types=1);
 if(PHP_SAPI!=='cli')exit(1);
 require dirname(__DIR__).'/app/bootstrap.php';
-$migrations=['001-giftcards'=>'giftcards.sql','002-merchant-credentials'=>'giftcards-credentials.sql'];$locked=false;
+$migrations=['001-giftcards'=>'giftcards.sql','002-merchant-credentials'=>'giftcards-credentials.sql','003-operations'=>'giftcards-operations.sql'];$locked=false;
 try{
  $locked=(bool)one('SELECT GET_LOCK(?,10) AS locked',['pina-giftcards-migrate'])['locked'];if(!$locked)throw new RuntimeException('Migration already running');
  if(!one("SHOW TABLES LIKE 'pm_clients'"))throw new RuntimeException('Install the existing Pina application first');
@@ -12,6 +12,13 @@ try{
   if(($argv[1]??'')!=='--apply'){echo 'Ready to apply '.$version.". No tables changed. Use --apply after backup.\n";continue;}
   // MySQL DDL commits implicitly; mark each restartable migration only after completion.
   foreach(explode(';',file_get_contents($sqlFile)) as $statement)if(trim($statement)!=='')db()->exec($statement);
+  if($version==='003-operations'){
+   // Restartable removal of the old lifetime uniqueness; immutable history remains.
+   $indexes=rows("SHOW INDEX FROM pg_settlement_items");$hasUnique=false;$hasLookup=false;
+   foreach($indexes as $idx){if($idx['Key_name']==='activation_id'&&(int)$idx['Non_unique']===0)$hasUnique=true;if($idx['Key_name']==='pg_item_activation')$hasLookup=true;}
+   if(!$hasLookup)db()->exec('ALTER TABLE pg_settlement_items ADD INDEX pg_item_activation(activation_id)');
+   if($hasUnique)db()->exec('ALTER TABLE pg_settlement_items DROP INDEX activation_id');
+  }
   query('INSERT INTO pg_schema_migrations(version,checksum,applied_at) VALUES(?,?,?)',[$version,$hash,now()]);
   echo $version." applied. Existing wallet data was not converted.\n";
  }

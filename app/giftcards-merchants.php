@@ -27,7 +27,8 @@ function gc_save_merchant(array $d,array $actor):array {
  if(($balance['site_id']??'')!==$site||($balance['site_login']??'')!==$login)throw new ApiError('Ответ V-DAR не соответствует торговой точке и логину',409);
  return transact(function()use($scope,$merchant,$site,$login,$key,$actor,$old){
   if($scope!=='pina')one('SELECT id FROM pg_issuers WHERE id=? FOR UPDATE',[$scope]);
-  $existing=one('SELECT scope_id FROM pg_merchant_credentials WHERE scope_id=? FOR UPDATE',[$scope]);
+  $existing=one('SELECT * FROM pg_merchant_credentials WHERE scope_id=? FOR UPDATE',[$scope]);
+  if($existing&&(!hash_equals(gc_decrypt($existing['api_key_ciphertext']),$old['api_key']??'')||$existing['merchant_id']!==($old['merchant_id']??'')||$existing['site_id']!==($old['site_id']??'')||$existing['recipient_login']!==($old['recipient_login']??'')))throw new ApiError('Настройки изменены другим сотрудником. Обновите страницу.',409);
   $conflict=one('SELECT scope_id FROM pg_merchant_credentials WHERE scope_id<>? AND (merchant_id=? OR site_id=? OR recipient_login=?)',[$scope,$merchant,$site,$login]);
   if($conflict)throw new ApiError('Эти идентификаторы уже привязаны к другой компании',409);
   // Freeze the payment destination once orders exist; key rotation remains possible.

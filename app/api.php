@@ -5,7 +5,7 @@ require_once __DIR__.'/notifications.php';
 if(!function_exists('send_message')) require_once __DIR__.'/mail.php';
 header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');header('X-Frame-Options: DENY');
 function api_route(string $route,string $method):mixed {
- $post=$method==='POST';$get=$method==='GET';$upload=$route==='gift/documents/upload/';$d=$post?($upload?$_POST:input()):[];
+ $post=$method==='POST';$get=$method==='GET';$upload=in_array($route,['gift/documents/upload/','gift/admin/signature-upload/','gift/admin/bank-import/','gift/cases/upload/','gift/admin/evidence-upload/','gift/files/upload/'],true);$d=$post?($upload?$_POST:input()):[];
  if($post)csrf_check();
  if(str_starts_with($route,'gift/')){require_once __DIR__.'/giftcards.php';return giftcards_route(substr($route,5),$method,$d);}
  if($post&&in_array($route,['deposits/','orders/'],true)&&(cfg()['giftcards']['site_mode']??false))throw new ApiError('Для новых покупок выберите карту компании. Прежние заявки доступны в истории.',409);
@@ -35,6 +35,7 @@ function api_route(string $route,string $method):mixed {
  if(preg_match('~^orders/(\d+)/reply/$~',$route,$m)&&$post){$c=current_client();transact(function()use($c,$d,$m){$o=one('SELECT * FROM pm_operations WHERE number=? AND client_id=? FOR UPDATE',[$m[1],$c['id']]);if(!$o)throw new ApiError('Заявка не найдена',404);if($o['kind']!=='order'||$o['status']!=='needs_info')throw new ApiError('Сейчас уточнение не требуется',409);notify((int)$c['id'],(int)$c['id'],txt($d,'text'),(int)$o['number']);query("UPDATE pm_operations SET status='new',assigned_to=NULL,updated_at=? WHERE number=?",[now(),$o['number']]);audit((int)$c['id'],'clarification_replied',$o['number']);queue_operation_mail((int)$o['number'],'reply');});return ['ok'=>true];}
  if($route==='operations/'&&$get)return registry_response();
  if(str_starts_with($route,'admin/')){
+  if((cfg()['giftcards']['site_mode']??false)&&one("SHOW TABLES LIKE 'pg_staff_roles'")){require_once __DIR__.'/giftcards.php';if(gc_staff_role(current_client(true,true))!=='admin')throw new ApiError('Прежнее управление доступно только администратору',403);}
   $actor=current_client(true,true);
   if($route==='admin/settings/'&&$get)return site_settings();
   if($route==='admin/settings/'&&$post){$address=txt($d,'cashAddress',1000,false);$enabled=($d['cashEnabled']??false)===true;if($enabled&&$address==='')throw new ApiError('Укажите подтверждённый адрес кассы');$settings=['cashEnabled'=>$enabled,'cashAddress'=>$address];transact(function()use($settings,$actor){query("INSERT INTO pm_meta(name,value) VALUES('site_settings',?) ON DUPLICATE KEY UPDATE value=VALUES(value)",[json_encode($settings,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);audit((int)$actor['id'],'settings_updated','site',$settings);});return $settings;}

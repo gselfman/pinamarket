@@ -10,17 +10,21 @@ function gc_storage():string {
  foreach($webRoots as $webRoot){if(!is_string($webRoot)||$webRoot==='')continue;$web=realpath($webRoot);if($web!==false&&str_starts_with($real.'/',rtrim($web,'/').'/'))throw new RuntimeException('DOCUMENT_STORAGE_MUST_BE_PRIVATE');}
  chmod($real,0700);return $real;
 }
+function gc_document_access(array $actor,string $issuer,array $roles):void {if($actor['is_staff']??false){if(!one('SELECT id FROM pg_issuers WHERE id=?',[$issuer]))throw new ApiError('Компания не найдена',404);return;}gc_member($actor,$issuer,$roles);}
 function gc_document_route(string $route,string $method,array $d,array $actor):mixed {
- if($route==='documents/contract/'&&$method==='GET'){$issuer=(string)($_GET['issuerId']??'');gc_member($actor,$issuer,['owner','accountant']);$i=one('SELECT contract_number,contract_version FROM pg_issuers WHERE id=?',[$issuer]);$doc=one("SELECT * FROM pg_documents WHERE issuer_id=? AND kind='generated_contract' AND version=? ORDER BY created_at DESC LIMIT 1",[$issuer,$i['contract_version']]);if(!$doc)throw new ApiError('Сначала подготовьте договор',409);gc_send_document($doc,$i['contract_number'].'.docx');}
+ if($route==='documents/contract/'&&$method==='GET'){$issuer=(string)($_GET['issuerId']??'');gc_document_access($actor,$issuer,['owner','accountant']);$i=one('SELECT contract_number,contract_version FROM pg_issuers WHERE id=?',[$issuer]);$doc=one("SELECT * FROM pg_documents WHERE issuer_id=? AND kind='generated_contract' AND version=? ORDER BY created_at DESC LIMIT 1",[$issuer,$i['contract_version']]);if(!$doc)throw new ApiError('Сначала подготовьте договор',409);gc_send_document($doc,$i['contract_number'].'.docx');}
  if($route==='documents/prepare/'&&$method==='POST'){
-  $issuer=txt($d,'issuerId',36);gc_member($actor,$issuer,['owner','accountant']);$i=one('SELECT * FROM pg_issuers WHERE id=?',[$issuer]);$co=json_decode($i['company_json'],true,512,JSON_THROW_ON_ERROR);
+  if($actor['is_staff']??false)gc_admin_guard('documents-prepare/','POST',$actor);
+  $issuer=txt($d,'issuerId',36);gc_document_access($actor,$issuer,['owner','accountant']);$i=one('SELECT * FROM pg_issuers WHERE id=?',[$issuer]);$co=json_decode($i['company_json'],true,512,JSON_THROW_ON_ERROR);
+  require_once __DIR__.'/giftcards-operations.php';$co=gc_validate_company($co);
   $template=__DIR__.'/giftcards-template.docx';$signature=gc_signature_config();$version=hash('sha256',file_get_contents($template).$i['company_json'].json_encode($signature).$i['contract_number']);
   $existing=one("SELECT * FROM pg_documents WHERE issuer_id=? AND kind='generated_contract' AND version=?",[$issuer,$version]);
   if(!$existing){$id=gc_uuid();$storage=$id.'.docx';$path=gc_storage().'/'.$storage;gc_generate_contract($template,$path,$i,$co,$signature);$hash=hash_file('sha256',$path);transact(function()use($id,$issuer,$version,$storage,$path,$hash,$actor,$signature){query("INSERT INTO pg_documents(id,issuer_id,kind,version,storage_name,original_name,mime,size_bytes,sha256,status,uploaded_by,created_at) VALUES(?,?,'generated_contract',?,?,?,?,?,?,?,?,?)",[$id,$issuer,$version,$storage,'agency-contract.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document',filesize($path),$hash,$signature?'agent_signed':'draft',$actor['id'],now()]);query('UPDATE pg_issuers SET contract_version=?,contract_hash=?,contract_status=? WHERE id=?',[$version,$hash,$signature?'agent_signed':'draft',$issuer]);audit((int)$actor['id'],'gift_contract_generated',$id);});$existing=one('SELECT * FROM pg_documents WHERE id=?',[$id]);}
   return ['id'=>$existing['id'],'status'=>$existing['status'],'downloadUrl'=>'/api/gift/documents/contract/?issuerId='.$issuer];
  }
  if($route==='documents/upload/'&&$method==='POST'){
-  $issuer=txt($d,'issuerId',36);gc_member($actor,$issuer,['owner']);$i=one('SELECT * FROM pg_issuers WHERE id=?',[$issuer]);if(!$i['contract_hash'])throw new ApiError('Сначала подготовьте действующую редакцию договора');
+  if($actor['is_staff']??false)gc_admin_guard('supplier-save/','POST',$actor);
+  $issuer=txt($d,'issuerId',36);gc_document_access($actor,$issuer,['owner']);$i=one('SELECT * FROM pg_issuers WHERE id=?',[$issuer]);if(!$i['contract_hash'])throw new ApiError('Сначала подготовьте действующую редакцию договора');
   $file=$_FILES['file']??null;if(!$file||$file['error']!==UPLOAD_ERR_OK||$file['size']<8||$file['size']>10*1024*1024||!is_uploaded_file($file['tmp_name']))throw new ApiError('Загрузите PDF или DOCX размером до 10 МБ');
   $mime=(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);$ext='';
   if($mime==='application/pdf'&&str_starts_with(file_get_contents($file['tmp_name'],false,null,0,5),'%PDF-'))$ext='pdf';
@@ -30,7 +34,7 @@ function gc_document_route(string $route,string $method,array $d,array $actor):m
   try{transact(function()use($id,$issuer,$i,$storage,$target,$hash,$mime,$actor,$ext){query("INSERT INTO pg_documents(id,issuer_id,kind,version,storage_name,original_name,mime,size_bytes,sha256,status,uploaded_by,created_at) VALUES(?,?,'signed_contract',?,?,?,?,?,?,'review',?,?)",[$id,$issuer,$i['contract_version'],$storage,'signed-contract.'.$ext,$mime,filesize($target),$hash,$actor['id'],now()]);query("UPDATE pg_issuers SET contract_status='review',status='review',updated_at=? WHERE id=?",[now(),$issuer]);audit((int)$actor['id'],'gift_signed_contract_uploaded',$id);});}catch(Throwable $e){unlink($target);throw $e;}
   return ['id'=>$id,'status'=>'review'];
  }
- if($route==='documents/list/'&&$method==='GET'){$issuer=(string)($_GET['issuerId']??'');gc_member($actor,$issuer,['owner','accountant']);return ['items'=>rows('SELECT id,kind,version,original_name,mime,size_bytes,sha256,status,created_at FROM pg_documents WHERE issuer_id=? ORDER BY created_at DESC',[$issuer])];}
+ if($route==='documents/list/'&&$method==='GET'){$issuer=(string)($_GET['issuerId']??'');gc_document_access($actor,$issuer,['owner','accountant']);return ['items'=>rows('SELECT id,kind,version,original_name,mime,size_bytes,sha256,status,created_at FROM pg_documents WHERE issuer_id=? ORDER BY created_at DESC',[$issuer])];}
  if($route==='documents/download/'&&$method==='GET'){$id=(string)($_GET['id']??'');$doc=one('SELECT * FROM pg_documents WHERE id=?',[$id]);if(!$doc)throw new ApiError('Документ не найден',404);if(!(int)$actor['is_staff'])gc_member($actor,$doc['issuer_id'],['owner','accountant']);gc_send_document($doc,$doc['original_name']);}
  throw new ApiError('Метод не найден',404);
 }
