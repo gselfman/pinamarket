@@ -109,3 +109,12 @@ This performs read-only provider queries and restores the one matching original 
 Before enabling sales, verify actual email login, an authorised test bank receipt, issue restricted to the intended supplier, activation with the other merchant key, platform fees/actual balance, registry, bank settlement, supplier acknowledgement, the manual balance-reconciliation process and both unused/used-card claim paths. Use `--enable-sales` only after these checks and then publish the configuration through the release process. The command refuses missing signature, bank/legal settings, keys or an unconfirmed return method.
 
 To stop new sales use `--disable-sales` and publish configuration. To restore the previous homepage use `--legacy-home` and publish. Keep existing paid orders, claims, code records and uploaded documents available for fulfilment and reconciliation.
+
+
+## Update dated 2026-11-16
+
+The installation package now applies additive migrations 004 (TOTP and audit), 005 (documented bank admission) and 006 (underlying purchase declarations). Never edit the checksums of already applied migrations. Existing customers, encryption keys and financial records are retained; no historical customer activity is manufactured.
+
+After updating, staff must enrol their authenticator and retain the ten recovery codes. New sales additionally require approval of the published offer, a current signed issuer contract and documented bank admission/current manual screening. See OPERATIONS.md and CONTRACT-COVERAGE.md. Updating code does not assert that the bank has signed the proposed agreement.
+
+The hosting installer retains the existing mail/worker schedules and adds the daily audit archive at 03:15 server time. The archive remains searchable and exportable. CLI bank import is documented in OPERATIONS.md; keep statement files and previews outside the public directory.

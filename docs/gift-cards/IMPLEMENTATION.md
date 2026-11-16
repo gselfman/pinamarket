@@ -18,7 +18,7 @@ An approved PNG signature is configured privately, with a SHA-256 fingerprint. I
 
 Generation is a CSRF-protected POST. Downloading an existing document does not create or sign another one. Uploaded supplier documents are limited to PDF/DOCX, stored outside the public directory, hashed and accessible only to authorised company members or staff. Upload does not automatically approve a company. Approval checks the current contract version and a supplier-signed copy.
 
-The optional third appendix in the source agreement remains inactive unless separately signed. Reporting forms intentionally contain fields for future reports and operations; these are not missing buyer-specific agency agreements.
+The current third appendix records the actual underlying purchase and its performance. Its future-operation fields are completed by the issuer when the relevant event occurs; they are not missing buyer-specific agency agreements. See CONTRACT-COVERAGE.md for the current document-to-feature review and launch prerequisites.
 
 ## Financial states
 
