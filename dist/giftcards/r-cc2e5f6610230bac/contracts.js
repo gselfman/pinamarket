@@ -1,7 +1,7 @@
 // The real signing service, numbering and signature key must live on the server.
 // This browser generator produces a clearly numbered DEMO draft from the agreed Word template.
 export async function generateContract(company,record) {
- const source=await fetch('/giftcards/r-66f5ea7ac982173d/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
+ const source=await fetch('/giftcards/r-cc2e5f6610230bac/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
  const zip=await window.JSZip.loadAsync(await source.arrayBuffer()),path='word/document.xml',xml=await zip.file(path).async('string'),doc=new DOMParser().parseFromString(xml,'application/xml'),ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
  if(doc.querySelector('parsererror'))throw Error('Не удалось прочитать шаблон.');
  const text=e=>[...e.getElementsByTagNameNS(ns,'t')].map(n=>n.textContent).join('');
@@ -14,7 +14,7 @@ export async function generateContract(company,record) {
   else if(t.startsWith('Место заключения [город]'))t=`Место заключения Ереван. Дата ${formattedDate}`;
   else if(t.includes('и [полное наименование эмитента]')) t=t.replace('[полное наименование эмитента]',company.name).replace('регистрационный номер [номер]','регистрационный номер '+company.reg).replace('налоговый номер [номер]','налоговый номер '+company.tax).replace('[должность и ФИО]',company.role+' '+company.director).replace('[основание полномочий]',company.authority);
   else if(t.startsWith('К Договору №'))t=t.replace('[номер]',record.number).replace('[дата]',formattedDate);
-  if(t.includes('Эмитент: __________________ / [ФИО]'))t='Агент: __________________ / Усенков П. А.\nЭмитент: __________________ / '+company.director;
+  if(t.includes('Эмитент: __________________ / [ФИО]'))t='Эмитент: __________________ / '+company.director;
   if(t!==text(p))setText(p,t);
  }
  const tables=[...doc.getElementsByTagNameNS(ns,'tbl')];

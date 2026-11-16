@@ -14,7 +14,7 @@ export async function generateContract(company,record) {
   else if(t.startsWith('Место заключения [город]'))t=`Место заключения Ереван. Дата ${formattedDate}`;
   else if(t.includes('и [полное наименование эмитента]')) t=t.replace('[полное наименование эмитента]',company.name).replace('регистрационный номер [номер]','регистрационный номер '+company.reg).replace('налоговый номер [номер]','налоговый номер '+company.tax).replace('[должность и ФИО]',company.role+' '+company.director).replace('[основание полномочий]',company.authority);
   else if(t.startsWith('К Договору №'))t=t.replace('[номер]',record.number).replace('[дата]',formattedDate);
-  if(t.includes('Эмитент: __________________ / [ФИО]'))t='Агент: __________________ / Усенков П. А.\nЭмитент: __________________ / '+company.director;
+  if(t.includes('Эмитент: __________________ / [ФИО]'))t='Эмитент: __________________ / '+company.director;
   if(t!==text(p))setText(p,t);
  }
  const tables=[...doc.getElementsByTagNameNS(ns,'tbl')];

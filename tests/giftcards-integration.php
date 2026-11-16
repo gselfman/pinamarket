@@ -49,13 +49,12 @@ gc_admin_route('merchant-settings/','POST',array_replace($settings,['apiKey'=>''
 greject(fn()=>gc_admin_route('merchant-settings/','POST',array_replace($settings,['identityVerified'=>false]),current_client()),'merchant identity consent required');
 greject(fn()=>gc_admin_route('merchant-settings/','POST',array_replace($settings,['merchantId'=>$pinaSettings['merchantId']]),current_client()),'supplier cannot use Pina merchant');
 as_client(1027);greject(fn()=>giftcards_route('admin/merchant-settings/','GET'),'supplier cannot read admin merchant credentials');
-// Disposable signed-document and bank-approval fixtures; never run against production.
+// Disposable signed-document fixture; never run against production.
 as_client(1000);
 $fixtureIssuer=one('SELECT * FROM pg_issuers WHERE id=?',[$issuer]);$fixtureVersion=gc_contract_version($fixtureIssuer,null);$signed=gc_uuid();
 query("UPDATE pg_issuers SET contract_version=? WHERE id=?",[$fixtureVersion,$issuer]);
 query("INSERT INTO pg_documents(id,issuer_id,kind,version,storage_name,original_name,mime,size_bytes,sha256,status,uploaded_by,created_at) VALUES(?,?,'signed_contract',?,?,?,?,?,?,'approved',1000,?)",[$signed,$issuer,$fixtureVersion,'disposable-signed.docx','disposable-signed.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document',1,str_repeat('0',64),now()]);
 gc_setting_save('legal_approved',true,current_client());gc_setting_save('payment_instructions','Disposable test banking instructions',current_client());gc_setting_save('legal_source_sha256',hash_file('sha256',dirname(__DIR__).'/app/giftcards-offer.json'),current_client());
-$bankProof=test_evidence('bank_approval',$issuer);gc_record_bank_approval(['issuerId'=>$issuer,'reference'=>'DISPOSABLE-TEST-BANK-APPROVAL','approvalDate'=>gmdate('Y-m-d'),'evidenceId'=>$bankProof,'screeningNote'=>'Disposable source verification fixture; no real bank approval asserted','bankVerified'=>true,'screeningVerified'=>true],current_client());
 $offer=gc_offer();
 as_client(1014);
 greject(fn()=>giftcards_route('auth/request/','POST',['email'=>'buyer@example.com','accepted'=>false,'offerVersion'=>$offer['version']]),'unchecked offer rejected');

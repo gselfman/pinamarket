@@ -113,8 +113,8 @@ To stop new sales use `--disable-sales` and publish configuration. To restore th
 
 ## Update dated 2026-11-16
 
-The installation package now applies additive migrations 004 (TOTP and audit), 005 (documented bank admission) and 006 (underlying purchase declarations). Never edit the checksums of already applied migrations. Existing customers, encryption keys and financial records are retained; no historical customer activity is manufactured.
+The installation package now applies additive migrations 004 (TOTP and audit), 005 (reserved compatibility table; the bank approval workflow is not used) and 006 (underlying purchase declarations). Never edit the checksums of already applied migrations. Existing customers, encryption keys and financial records are retained; no historical customer activity is manufactured.
 
-After updating, staff must enrol their authenticator and retain the ten recovery codes. New sales additionally require approval of the published offer, a current signed issuer contract and documented bank admission/current manual screening. See OPERATIONS.md and CONTRACT-COVERAGE.md. Updating code does not assert that the bank has signed the proposed agreement.
+After updating, staff must enrol their authenticator and retain the ten recovery codes. New sales additionally require approval of the published offer, a current signed issuer contract and configured programme. See OPERATIONS.md and CONTRACT-COVERAGE.md. Bank communication and any approvals take place outside the website. No bank account/role, per-contract bank approval form or daily bank-review sales gate exists.
 
 The hosting installer retains the existing mail/worker schedules and adds the daily audit archive at 03:15 server time. The archive remains searchable and exportable. CLI bank import is documented in OPERATIONS.md; keep statement files and previews outside the public directory.
