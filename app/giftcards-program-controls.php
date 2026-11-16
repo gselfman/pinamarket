@@ -42,3 +42,13 @@ function gc_record_bank_approval(array $d,array $actor):array {
 function gc_archive_offer(array $offer):void {
  query('INSERT IGNORE INTO pg_legal_versions(hash,version,document_json,created_at) VALUES(?,?,?,?)',[$offer['hash'],$offer['version'],json_encode($offer,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),now()]);
 }
+
+function gc_purchase_matches(string $activation,array $purchase):bool {
+ $p=one('SELECT * FROM pg_activation_purchases WHERE activation_id=?',[$activation]);
+ return $p&&$p['subject']===$purchase['subject']&&$p['performance']===$purchase['performance']&&$p['document_reference']===$purchase['document']&&$p['holder_name']===$purchase['holder'];
+}
+function gc_purchase_record(string $activation,array $card,array $purchase,array $actor):void {
+ $snapshot=json_decode($card['snapshot_json'],true,512,JSON_THROW_ON_ERROR);$program=$snapshot['program']??[];gc_program_location($program);
+ query('INSERT INTO pg_activation_purchases(activation_id,subject,country,place,performance,document_reference,holder_name,recorded_by,created_at) VALUES(?,?,?,?,?,?,?,?,?)',[$activation,$purchase['subject'],$program['use_country'],$program['fulfillment_address'],$purchase['performance'],$purchase['document'],$purchase['holder'],$actor['id'],now()]);
+ audit((int)$actor['id'],'gift_purchase_declared',$activation,['performance'=>$purchase['performance']]);
+}

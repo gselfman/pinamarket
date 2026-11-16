@@ -37,6 +37,15 @@ jobs:
           php tests/giftcards-unit.php
           php tests/giftcards-integration.php
 
+      - name: Retain generated contract for document layout review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-contract-layout
+          path: /tmp/Pina-server-filled-test.docx
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: Verify operational API and private files with real PHP sessions
         env:
           PINA_CONFIG: ${{ runner.temp }}/pina-gift-test.php
