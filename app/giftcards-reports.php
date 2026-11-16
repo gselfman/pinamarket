@@ -13,7 +13,7 @@ function gc_admin_report(array $q,array $actor):never {
  'refunds'=>['id'=>'Обращение','email'=>'Покупатель','issuer_name'=>'Поставщик','order_id'=>'Заказ','reason'=>'Причина','status'=>'Статус','amount_minor'=>'Возвращено покупателю RUB','recovered_minor'=>'Возмещено эмитентом RUB','due_at'=>'Срок UTC','resolution'=>'Решение'],
  'commands'=>['id'=>'Операция','order_id'=>'Заказ','issuer_name'=>'Поставщик','kind'=>'Тип','status'=>'Статус','error_code'=>'Причина','created_at'=>'Создана UTC'],
  'clients'=>['id'=>'Клиент','email'=>'Email','email_verified_at'=>'Почта подтверждена UTC','order_count'=>'Заказов','sales_blocked'=>'Новые покупки ограничены'],
- 'audit'=>['id'=>'Событие','email'=>'Сотрудник','action'=>'Действие','object_ref'=>'Основание','details_json'=>'Подробности','created_at'=>'Дата UTC']
+ 'audit'=>['id'=>'Событие','email'=>'Участник','actor_kind'=>'Роль в момент события','source'=>'Источник','target_client_id'=>'Связанный клиент','user_agent'=>'Фактический заголовок браузера','ip_hash'=>'Псевдоним сетевого адреса','action'=>'Действие','object_ref'=>'Основание','details_json'=>'Подробности','created_at'=>'Дата UTC']
  ];
  $fields=$definitions[$kind];$table=[array_values($fields)];foreach($items as $row){$line=[];foreach($fields as $key=>$label){$value=$row[$key]??'';if(str_ends_with($key,'_minor')&&$value!=='')$value=VdarClient::decimal((int)$value);$line[]=gc_report_cell($value);}$table[]=$line;}
  audit((int)$actor['id'],'gift_report_exported',$kind,['issuerId'=>$q['issuerId']??null,'rows'=>count($items),'from'=>$q['from']??null,'to'=>$q['to']??null]);

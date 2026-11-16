@@ -1,0 +1,2 @@
+const {createHmac}=require('node:crypto');
+module.exports=function totp(secret,at=Date.now()){let bits=0,buffer=0,bytes=[];for(const c of secret){buffer=(buffer<<5)|'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.indexOf(c);bits+=5;if(bits>=8){bits-=8;bytes.push((buffer>>bits)&255);}buffer&=(1<<bits)-1;}const step=BigInt(Math.floor(at/30000)),msg=Buffer.alloc(8);msg.writeBigUInt64BE(step);const h=createHmac('sha1',Buffer.from(bytes)).update(msg).digest(),off=h[19]&15;return String((h.readUInt32BE(off)&0x7fffffff)%1000000).padStart(6,'0');};

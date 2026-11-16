@@ -3,7 +3,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),source=path.join(root,'prototype'),out=path.join(root,'dist/giftcards');
-const names=['app.js','live-app.js','admin.mjs','workflows.mjs','style.css','legacy-ui.mjs','model.mjs','merchant.mjs','contracts.mjs'];
+const names=['app.js','live-app.js','admin.mjs','workflows.mjs','staff-access.mjs','style.css','legacy-ui.mjs','model.mjs','merchant.mjs','contracts.mjs'];
 const hash=createHash('sha256');for(const name of [...names,'index.html'])hash.update(await fs.readFile(path.join(source,name)));for(const name of (await fs.readdir(path.join(source,'assets'))).sort())hash.update(await fs.readFile(path.join(source,'assets',name)));
 const tag='r-'+hash.digest('hex').slice(0,16),prefix='/giftcards/'+tag,versioned=path.join(out,tag);
 await fs.rm(out,{recursive:true,force:true});await fs.mkdir(versioned,{recursive:true});await fs.cp(path.join(source,'assets'),path.join(versioned,'assets'),{recursive:true});

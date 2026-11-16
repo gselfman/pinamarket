@@ -1,5 +1,6 @@
 // Actual deployed PHP/Apache session flow, isolated CI hosting only; no provider calls.
 const assert=require('node:assert/strict');
+const totp=require('./helpers/totp.cjs');
 const {chromium}=require(process.env.PINA_PLAYWRIGHT);
 (async()=>{
  const browser=await chromium.launch({headless:true});
@@ -15,6 +16,15 @@ const {chromium}=require(process.env.PINA_PLAYWRIGHT);
   await page.locator('#email').fill('install-admin@example.com');
   await page.locator('#password').fill('PinaInstall2026-LongPassword');
   await page.locator('#auth-form').getByRole('button',{name:'Войти',exact:true}).click();
+  await page.locator('[data-staff-access=setup]').waitFor();
+  assert.equal(await page.locator('.admin-shell').count(),0);
+  await page.locator('[data-staff-access=setup] [name=password]').fill('PinaInstall2026-LongPassword');
+  await page.locator('[data-staff-access=setup] button').click();
+  const secret=(await page.locator('.staff-secret').innerText()).replace(/\s/g,'');
+  await page.locator('[data-staff-access=confirm] [name=code]').fill(totp(secret));
+  await page.locator('[data-staff-access=confirm] button').click();
+  await page.locator('.recovery-codes').waitFor();
+  await page.locator('[data-action=otp-continue]').click();
   await page.getByRole('heading',{name:'Управление программой',exact:true}).waitFor();
   assert.equal(page.url(),base+'/giftcards/#/admin');
   assert.ok(await page.getByRole('link',{name:'Клиенты',exact:true}).isVisible());

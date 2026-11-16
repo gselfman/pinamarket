@@ -25,7 +25,7 @@ jobs:
       - run: find app deploy tests -name '*.php' -print0 | xargs -0 -n1 php -l
       - run: php tests/vdar.php
       - run: node prototype/tests/model.mjs
-      - run: node --check prototype/app.js && node --check prototype/merchant.mjs && node --check prototype/contracts.mjs && node --check prototype/admin.mjs && node --check prototype/workflows.mjs && node --check prototype/live-app.js
+      - run: node --check prototype/app.js && node --check prototype/merchant.mjs && node --check prototype/contracts.mjs && node --check prototype/staff-access.mjs && node --check prototype/admin.mjs && node --check prototype/workflows.mjs && node --check prototype/live-app.js
       - name: Verify migration on actual MySQL
         env:
           PINA_CONFIG: ${{ runner.temp }}/pina-gift-test.php
