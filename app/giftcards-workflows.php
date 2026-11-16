@@ -5,13 +5,14 @@ function gc_atomic(callable $f):mixed {return db()->inTransaction()?$f():transac
 
 /** Access to an operational object is always checked before storing or serving its files. */
 function gc_program_location(array $p):void {
- if(empty($p['fulfillment_address'])||!is_string($p['fulfillment_address'])||mb_strlen($p['fulfillment_address'])>500||($p['delivery_to_rf']??null)!==false||($p['digital_services']??null)!==false)throw new ApiError('Подтвердите фактический адрес исполнения в Кыргызстане и отсутствие выдачи в РФ. Электронные услуги требуют отдельной программы.',409);
+ if(empty($p['fulfillment_address'])||!is_string($p['fulfillment_address'])||mb_strlen($p['fulfillment_address'])>500||($p['delivery_to_rf']??null)!==false||($p['digital_services']??null)!==false)throw new ApiError('Подтвердите фактический адрес исполнения в Кыргызстане и отсутствие выдачи в РФ. Электронные и финансовые услуги по этой программе исключены.',409);
 }
 function gc_object_access(string $kind,string $id,array $actor):array {
  $issuer=null;$client=null;
  if($kind==='settlement'){$r=one('SELECT issuer_id FROM pg_settlements WHERE id=?',[$id]);$issuer=$r['issuer_id']??null;}
  elseif($kind==='refund'){$r=one('SELECT r.client_id,o.issuer_id FROM pg_refunds r JOIN pg_cards c ON c.id=r.card_id JOIN pg_orders o ON o.id=c.order_id WHERE r.id=?',[$id]);$issuer=$r['issuer_id']??null;$client=$r['client_id']??null;}
  elseif($kind==='case'){$r=one('SELECT issuer_id,client_id FROM pg_support_cases WHERE id=?',[$id]);$issuer=$r['issuer_id']??null;$client=$r['client_id']??null;}
+ elseif($kind==='bank_approval'){if(!($actor['is_staff']??false)||gc_staff_role($actor)!=='admin')throw new ApiError('Документы согласования банка доступны администратору',403);$r=one('SELECT id FROM pg_issuers WHERE id=?',[$id]);$issuer=$r['id']??null;}
  else throw new ApiError('Недопустимый вид документа');
  if(!$r)throw new ApiError('Основание не найдено',404);
  if(!($actor['is_staff']??false)&&(int)$client!==(int)$actor['id']){if(!$issuer)throw new ApiError('Нет доступа',403);gc_member($actor,$issuer,['owner','accountant']);}

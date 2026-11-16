@@ -49,6 +49,12 @@ gc_admin_route('merchant-settings/','POST',array_replace($settings,['apiKey'=>''
 greject(fn()=>gc_admin_route('merchant-settings/','POST',array_replace($settings,['identityVerified'=>false]),current_client()),'merchant identity consent required');
 greject(fn()=>gc_admin_route('merchant-settings/','POST',array_replace($settings,['merchantId'=>$pinaSettings['merchantId']]),current_client()),'supplier cannot use Pina merchant');
 as_client(1027);greject(fn()=>giftcards_route('admin/merchant-settings/','GET'),'supplier cannot read admin merchant credentials');
+// Disposable signed-document and bank-approval fixtures; never run against production.
+$fixtureIssuer=one('SELECT * FROM pg_issuers WHERE id=?',[$issuer]);$fixtureVersion=gc_contract_version($fixtureIssuer,null);$signed=gc_uuid();
+query("UPDATE pg_issuers SET contract_version=? WHERE id=?",[$fixtureVersion,$issuer]);
+query("INSERT INTO pg_documents(id,issuer_id,kind,version,storage_name,original_name,mime,size_bytes,sha256,status,uploaded_by,created_at) VALUES(?,?,'signed_contract',?,?,?,?,?,?,'approved',1000,?)",[$signed,$issuer,$fixtureVersion,'disposable-signed.docx','disposable-signed.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document',1,str_repeat('0',64),now()]);
+gc_setting_save('legal_approved',true,current_client());gc_setting_save('payment_instructions','Disposable test banking instructions',current_client());gc_setting_save('legal_source_sha256',hash_file('sha256',dirname(__DIR__).'/app/giftcards-offer.json'),current_client());
+$bankProof=test_evidence('bank_approval',$issuer);gc_record_bank_approval(['issuerId'=>$issuer,'reference'=>'DISPOSABLE-TEST-BANK-APPROVAL','approvalDate'=>gmdate('Y-m-d'),'evidenceId'=>$bankProof,'screeningNote'=>'Disposable source verification fixture; no real bank approval asserted','bankVerified'=>true,'screeningVerified'=>true],current_client());
 $offer=gc_offer();
 as_client(1014);
 greject(fn()=>giftcards_route('auth/request/','POST',['email'=>'buyer@example.com','accepted'=>false,'offerVersion'=>$offer['version']]),'unchecked offer rejected');
@@ -68,5 +74,6 @@ $second=giftcards_route('orders/','POST',array_replace($request,['key'=>gc_uuid(
 giftcards_route('refunds/','POST',['cardId'=>$secondId,'reason'=>'Unused card is no longer needed']);as_client(1000);gc_admin_route('refund-cancel-code/','POST',['cardId'=>$secondId],current_client());gc_run_one();gassert(gc_card($secondId)['issuance_status']==='cancelled','unused code cancelled');query("UPDATE pg_cards SET issuance_status='issued' WHERE id=?",[$secondId]);query("UPDATE pg_commands SET status='unknown' WHERE card_id=? AND kind='cancel'",[$secondId]);$beforeReconcile=count($providerCalls);$checked=gc_admin_route('cancel-reconcile/','POST',['cardId'=>$secondId],current_client());gassert($checked['status']==='cancelled'&&count($providerCalls)===$beforeReconcile+1,'read-only cancellation recovery makes one GET and no second DELETE');$refund=one('SELECT * FROM pg_refunds WHERE card_id=?',[$secondId]);gc_admin_route('refund-paid/','POST',['refundId'=>$refund['id'],'amount'=>'10000.00','bankReference'=>'TEST-REFUND-1','evidenceId'=>test_evidence('refund',$refund['id'])],current_client());gassert(gc_card($secondId)['refund_status']==='paid','bank refund recorded separately');
 gassert((int)query('SELECT COUNT(*) FROM pm_mail_queue')->fetchColumn()>=2,'notifications queued without secret codes');foreach(rows('SELECT body FROM pm_mail_queue') as $row)foreach(array_keys($codes) as $secret)gassert(!str_contains($row['body'],$secret),'email contains no secret code');
 require __DIR__.'/giftcards-operations.php';
+require __DIR__.'/giftcards-program-controls.php';
 require __DIR__.'/giftcards-access-audit.php';
 echo 'PASS: '.$checks." native PHP/MySQL gift-card integration checks; provider transport and email are stubbed\n";
