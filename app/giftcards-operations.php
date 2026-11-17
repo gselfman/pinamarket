@@ -18,9 +18,10 @@ function gc_payment_record(array $d,array $actor):array {
  $id=gc_uuid();query('INSERT INTO pg_bank_references(reference,event_kind,object_id,created_at) VALUES(?,?,?,?)',[$ref,'gift_bank_event',$id,now()]);query('INSERT INTO pg_bank_events(id,reference,amount_minor,bank_date,comment,actor_id,created_at) VALUES(?,?,?,?,?,?,?)',[$id,$ref,$amount,$date,txt($d,'comment',3000,false),$actor['id'],now()]);
  if($order>0)gc_payment_assign(one('SELECT * FROM pg_bank_events WHERE id=? FOR UPDATE',[$id]),$order,$actor);audit((int)$actor['id'],'gift_bank_event_recorded',$id,['reference'=>$ref,'amount_minor'=>$amount]);return ['id'=>$id,'orderId'=>$order?:null];
 }
-function gc_validate_company(array $co):array {
+function gc_validate_company(array $co,bool $onboarding=false):array {
  foreach(['fulfillmentAddress','name','reg','tax','address','role','director','authority','email','phone','bank','account','swift','goods','rules','issueTime','requestTime','validity','redemption','exchangeChannel'] as $field)$co[$field]=txt($co,$field,500);
  if(!filter_var($co['email'],FILTER_VALIDATE_EMAIL)||!filter_var($co['rules'],FILTER_VALIDATE_URL)||parse_url($co['rules'],PHP_URL_SCHEME)!=='https')throw new ApiError('Проверьте почту и HTTPS-ссылку на правила');
+ if(!$onboarding)return $co;
  $co['category']=txt($co,'category',40);if(!isset(gc_categories()[$co['category']]))throw new ApiError('Выберите категорию товаров или услуг');
  $co['country']=strtoupper((string)($co['country']??'KG'));$co['countryName']=gc_country_name($co['country']);
  $co['fulfillmentCountry']=strtoupper((string)($co['fulfillmentCountry']??$co['country']));$co['fulfillmentCountryName']=gc_country_name($co['fulfillmentCountry']);
@@ -33,7 +34,7 @@ function gc_save_supplier_company(string $id,mixed $raw,array $actor):array {
  if(!is_array($raw))throw new ApiError('Заполните реквизиты компании');
  $i=one('SELECT * FROM pg_issuers WHERE id=? FOR UPDATE',[$id]);if(!$i)throw new ApiError('Компания не найдена');
  if(one('SELECT id FROM pg_orders WHERE issuer_id=? LIMIT 1',[$id]))throw new ApiError('Есть заказы: изменения реквизитов и программы оформляются отдельной новой редакцией',409);
- $co=gc_validate_company($raw);$p=gc_company_program($co,json_decode($i['program_json'],true));
+ $co=gc_validate_company($raw,true);$p=gc_company_program($co,json_decode($i['program_json'],true));
  query("UPDATE pg_issuers SET name=?,country=?,company_json=?,program_json=?,status='review',contract_status='draft',contract_version=NULL,contract_hash=NULL,updated_at=? WHERE id=?",[$co['name'],$co['country'],json_encode($co,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),json_encode($p,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE),now(),$id]);
  audit((int)$actor['id'],'gift_supplier_details_and_program_saved',$id);return ['issuerId'=>$id,'saved'=>true,'programSaved'=>true,'status'=>'review'];
 }

@@ -19,7 +19,7 @@ echo "PASS: supplier programme readiness identifies missing conditions without s
 
 require_once dirname(__DIR__).'/app/giftcards-operations.php';
 $international=array_replace($co,['country'=>'TR','category'=>'electronics','fulfillmentCountry'=>'TR','fulfillmentAddress'=>'Istanbul test showroom','goods'=>'Household appliances','nominals'=>[100000,20000000],'territoryConfirmed'=>true]);
-$international=gc_validate_company($international);$newProgram=gc_company_program($international);
+$international=gc_validate_company($international,true);gift_check(gc_validate_company($international)['country']==='TR','stored company can prepare a contract without repeating form confirmation');$newProgram=gc_company_program($international);
 gift_check(gc_program_issues($newProgram)===[]&&$newProgram['country_code']==='TR'&&$newProgram['nominals']===[100000,20000000],'supplier form builds a complete international programme');
 $internationalTarget=dirname($target).'/Pina-international-filled-test.docx';gc_generate_contract(dirname(__DIR__).'/app/giftcards-template-international.docx',$internationalTarget,['contract_number'=>'PM-TR-TEST'],$international,null);$z=new ZipArchive();$z->open($internationalTarget);$internationalXml=$z->getFromName('word/document.xml');$z->close();
 gift_check(str_contains($internationalXml,'Турция')&&!str_contains($internationalXml,'Кыргызская Республика')&&!str_contains($internationalXml,'[страна регистрации эмитента]'),'international contract contains actual country throughout');
