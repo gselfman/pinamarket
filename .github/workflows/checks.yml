@@ -30,6 +30,8 @@ jobs:
       - run: bash -n deploy/install.sh && bash -n deploy/bootstrap.sh
       - run: bash deploy/install.sh --check
       - run: php tests/unit.php
+      - run: php tests/mail-template.php
+      - run: python3 tests/mail-mime.py
       - name: Create ephemeral test configuration
         run: |
           php -r '$c=["base_url"=>"https://pina.test","debug"=>true,"db"=>["host"=>"127.0.0.1","port"=>3306,"name"=>"pina_test","user"=>"root","password"=>"local-test-only"],"cash_address"=>"Test","max_amount_minor"=>100000000];file_put_contents(getenv("RUNNER_TEMP")."/pina-test.php","<?php return ".var_export($c,true).";");'
