@@ -757,7 +757,7 @@ document.addEventListener("click", e => {
     try {
         {
             const c = await api("config/");
-            csrf = c.csrf; giftcardsAdminUrl = c.giftcardsAdminUrl === "/giftcards/#/admin" ? c.giftcardsAdminUrl : ""; await sync();
+            csrf = c.csrf; giftcardsAdminUrl = ["/admin/", "/giftcards/#/admin"].includes(c.giftcardsAdminUrl) ? c.giftcardsAdminUrl : ""; await sync();
         }
         if (location.pathname.startsWith("/reset")) { passwordRecoveryPage(); return; }
         render(), location.pathname.startsWith("/admin") ? signed && staff ? (view = "admin", 

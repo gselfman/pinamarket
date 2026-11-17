@@ -2,7 +2,7 @@
 export function createStaffAccess({api,esc,logo,status,refresh}){
  let access=null,secret='',uri='',recoveryCodes=[];
  const h=esc,error='<p class="form-error" role="alert" hidden></p>';
- const wrap=body=>`<main class="wrap legal-page staff-access" id="main"><a class="logo" href="#/">${logo()}</a><section class="panel"><p class="eyebrow">Вход сотрудника</p>${body}<p class="note">${h(access?.email||'')} · Pina Market</p></section></main>`;
+ const wrap=body=>`<main class="wrap legal-page staff-access" id="main"><a class="logo" href="/">${logo()}</a><section class="panel"><p class="eyebrow">Вход сотрудника</p>${body}<p class="note">${h(access?.email||'')} · Pina Market</p></section></main>`;
  async function gate(force=false){access=await api('admin/access/status/');if(access.verified&&!force)return null;return render();}
  function render(){
   if(recoveryCodes.length)return wrap(`<h1>Сохраните резервные коды</h1><p>Каждый код используется один раз вместо кода приложения. Сохраните их отдельно от телефона. Повторно показать этот список нельзя.</p><pre class="recovery-codes">${recoveryCodes.map(h).join('\n')}</pre><button class="btn outline" data-action="otp-backup">Скачать резервные коды</button><button class="btn" data-action="otp-continue">Коды сохранены — открыть управление</button>`);

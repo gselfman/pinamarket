@@ -67,6 +67,7 @@ as_client(1001);$beforeReset=one('SELECT password_hash,auth_version FROM pm_clie
 post('forgot/',['email'=>'client2@example.com']);$resetMail=end($GLOBALS['outbox']);
 preg_match('~/reset/\?token=([a-f0-9]{64})~',$resetMail['body'],$tokenMatch);
 expect(isset($tokenMatch[1])&&$resetMail['to']==='client2@example.com','recovery email contains a complete token for the requested account');
+$resetLines=explode("\n",trim($resetMail['body']));expect(end($resetLines)===rtrim(cfg()['base_url'],'/').'/reset/?token='.$tokenMatch[1],'reset link is the last nonempty line with no appended instructions');
 expect(one('SELECT password_hash FROM pm_clients WHERE id=1001')['password_hash']===$beforeReset['password_hash'],'requesting recovery never changes the password');
 $newPassword='ResetFixture2026-NewSecret';fail_api(fn()=>post('reset/',['token'=>str_repeat('0',64),'password'=>$newPassword]),400,'wrong reset token cannot change credentials');
 post('reset/',['token'=>$tokenMatch[1],'password'=>$newPassword]);$afterReset=one('SELECT password_hash,auth_version FROM pm_clients WHERE id=1001');

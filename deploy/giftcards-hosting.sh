@@ -31,5 +31,5 @@ if ! PINA_CODE_DIR="$PINA_GIFT_ROOT" bash deploy/giftcards-cron.sh; then
 fi
 printf '\nУСТАНОВЛЕНО: %s/\nСтарый сайт сохранён: %s/V0 (закрытый архив).\n' "$PINA_BASE_URL" "$PINA_PUBLIC_DIR"
 printf 'Рабочий исходный код и настройки: %s\n' "$PINA_GIFT_ROOT"
-printf 'Вход в управление: %s/#/admin\n' "$PINA_BASE_URL"
+printf 'Вход в управление: %s/admin/\n' "$PINA_BASE_URL"
 printf 'Продажи откроются после настройки ключей поставщиков, подписи и согласования программы.\n'
