@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {seedState,createOrder,transition,findCard,cardStatus} from '../model.mjs';
-import {ensureMerchant,acceptMerchantCode,acknowledgeSettlement,merchantTotals,registryCSV} from '../merchant.mjs';
+import {ensureMerchant,acceptMerchantCode,acknowledgeSettlement,merchantTotals,registryCSV,companyFieldValue,companyFieldsHTML,programFormValues} from '../merchant.mjs';
 import {webcrypto} from 'node:crypto';
 globalThis.crypto??=webcrypto;
 const s=seedState();ensureMerchant(s);
@@ -21,3 +21,18 @@ const c2=o.cards[1];transition(s,'request_refund',c2.id,{reason:'Неиспол�
 transition(s,'request_refund',c.id,{reason:'Поставщик не выполнил услугу по договору'});assert.equal(c.refund,'requested');assert.throws(()=>transition(s,'complete_refund',c.id),/отдельная проверка/);
 assert.ok(!registryCSV(s).includes(code));assert.ok(merchantTotals(s).balance>=0);
 console.log('PASS: financial state transitions, issuer isolation, duplicate operations, unknown issue, refund and settlement checks');
+
+// Existing agreed terms must survive recommendations, particularly expiry settings.
+assert.equal(companyFieldValue({},'rules'),'https://pina.market/#/legal/terms');
+assert.equal(companyFieldValue({issueTime:'Два рабочих дня'},'issueTime'),'Два рабочих дня');
+assert.equal(companyFieldValue({},'issueTime',{issue_deadline:'Согласованный срок'}),'Согласованный срок');
+assert.equal(programFormValues({}).days,180);
+assert.equal(programFormValues({validity:'90 дней со дня выпуска кода'}).days,90);
+assert.equal(programFormValues({validity:'90 дней'},{days:180}).days,90);
+assert.equal(programFormValues({validity:'Один год'}).days,'');
+assert.equal(programFormValues({},{expires_seconds:90*86400}).days,90);
+assert.equal(programFormValues({}).request_deadline,'В течение 365 дней после подтверждения оплаты');
+assert.equal(programFormValues({issueTime:'Особый срок'},{issue_deadline:'Старый срок'}).issue_deadline,'Особый срок');
+assert.ok(companyFieldsHTML({}).includes('aria-describedby="co-issueTime-hint"'));
+assert.ok(companyFieldsHTML({rules:'https://example.com/?a="test"'}).includes('&quot;'));
+console.log('PASS: supplier recommendations preserve agreed terms and explicit expiry settings');
