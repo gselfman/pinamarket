@@ -1,7 +1,9 @@
+import {COUNTRIES} from './countries.js';
 // The real signing service, numbering and signature key must live on the server.
 // This browser generator produces a clearly numbered DEMO draft from the agreed Word template.
 export async function generateContract(company,record) {
- const source=await fetch('/giftcards/r-800609e3e0a16c8a/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
+ const country=COUNTRIES.find(c=>c.code===company.country)?.name||'Кыргызская Республика',fulfillment=COUNTRIES.find(c=>c.code===company.fulfillmentCountry)?.name||country;
+ const source=await fetch('/giftcards/r-c022ccc459d7859c/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
  const zip=await window.JSZip.loadAsync(await source.arrayBuffer()),path='word/document.xml',xml=await zip.file(path).async('string'),doc=new DOMParser().parseFromString(xml,'application/xml'),ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
  if(doc.querySelector('parsererror'))throw Error('Не удалось прочитать шаблон.');
  const text=e=>[...e.getElementsByTagNameNS(ns,'t')].map(n=>n.textContent).join('');
@@ -15,18 +17,18 @@ export async function generateContract(company,record) {
   else if(t.includes('и [полное наименование эмитента]')) t=t.replace('[полное наименование эмитента]',company.name).replace('регистрационный номер [номер]','регистрационный номер '+company.reg).replace('налоговый номер [номер]','налоговый номер '+company.tax).replace('[должность и ФИО]',company.role+' '+company.director).replace('[основание полномочий]',company.authority);
   else if(t.startsWith('К Договору №'))t=t.replace('[номер]',record.number).replace('[дата]',formattedDate);
   if(t.includes('Эмитент: __________________ / [ФИО]'))t='Эмитент: __________________ / '+company.director;
-  if(t!==text(p))setText(p,t);
+  t=t.replaceAll('[страна регистрации эмитента]',country);if(t!==text(p))setText(p,t);
  }
  const tables=[...doc.getElementsByTagNameNS(ns,'tbl')];
  // Existing issuer requisites cell, retaining the table's layout and all other cells.
  const cells=[...tables[0].getElementsByTagNameNS(ns,'tc')];
- setText(cells[3],`${company.name}\nСтрана: Кыргызская Республика\nРег. № ${company.reg}\nНалоговый № ${company.tax}\nАдрес: ${company.address}\nБанковские реквизиты: Приложение 1\nЭлектронная почта: ${company.email}\nТелефон: ${company.phone}`);
+ setText(cells[3],`${company.name}\nСтрана: ${country}\nРег. № ${company.reg}\nНалоговый № ${company.tax}\nАдрес: ${company.address}\nБанковские реквизиты: Приложение 1\nЭлектронная почта: ${company.email}\nТелефон: ${company.phone}`);
  setText(cells[5],`${company.role}\n${company.director}\nПодпись __________________`);
  const values={
  'Эмитент и фактический поставщик':`${company.name}, рег. № ${company.reg}, налоговый № ${company.tax}, ${company.address}, ${company.email}, ${company.phone}. Эмитент является стороной основного договора и отвечает за привлеченных им исполнителей.`,
- 'Товары или услуги и место исполнения':`${company.goods}. Место исполнения: Кыргызская Республика, ${company.fulfillmentAddress||'[фактический адрес]'}. Получение товара и оказание услуг в РФ не предусмотрены. Электронные и финансовые услуги исключены.`,
+ 'Товары или услуги и место исполнения':`${company.goods}. Место исполнения: ${fulfillment}, ${company.fulfillmentAddress||'[фактический адрес]'}. Получение товара и оказание услуг в РФ не предусмотрены. Электронные и финансовые услуги исключены.`,
  'Правила карты и основного договора':`Оферта Pina Market от 16.11.2026: https://pina.market/giftcards/#/legal/terms. Правила карты и основной покупки: ${company.rules}. Условия программы закреплены настоящим Приложением; применимые редакции сохраняются для каждого заказа.`,
- 'Номиналы и валюта':'10 000, 50 000, 100 000, 500 000, 1 000 000 и 5 000 000 RUB. Цена для покупателя соответствует номиналу. Доступные номиналы и лимиты согласуются до открытия продаж.',
+ 'Номиналы и валюта':`${(company.nominals||[]).map(n=>(n/100).toLocaleString('ru-RU')).join(', ')} RUB. Цена для покупателя соответствует номиналу. Доступные номиналы и лимиты согласуются до открытия продаж.`,
  'Выпуск и действие':`Срок выпуска по запросу: ${company.issueTime}. Срок запроса выпуска: ${company.requestTime}. Срок действия после выпуска: ${company.validity}. Последствия истечения не исключают предусмотренные законом денежные требования.`,
  'Погашение':`${company.redemption}. При погашении Эмитент фиксирует ФИО покупателя и связанный основной договор / заказ. Данные отражаются в реестре. Отдельный агентский договор с покупателем не нужен.`,
  'Банк и счет Эмитента':`${company.bank}. Получатель: ${company.name}. Счет / IBAN: ${company.account}. SWIFT / банковский код: ${company.swift}. Другой получатель допускается только по пункту 6.3.`,

@@ -16,3 +16,13 @@ $missing=$ready;$missing['expires_seconds']=0;gift_check(count(gc_program_issues
 gift_check(count(gc_program_issues(null))>=10,'empty programme lists all required settings');
 $failed=false;try{gc_program_required([]);}catch(ApiError $e){$failed=str_contains($e->getMessage(),'Условия карт')&&str_contains($e->getMessage(),'номинал');}gift_check($failed,'approval error directs the operator to actual missing settings');
 echo "PASS: supplier programme readiness identifies missing conditions without saving or approving them\n";
+
+require_once dirname(__DIR__).'/app/giftcards-operations.php';
+$international=array_replace($co,['country'=>'TR','category'=>'electronics','fulfillmentCountry'=>'TR','fulfillmentAddress'=>'Istanbul test showroom','goods'=>'Household appliances','nominals'=>[100000,20000000],'territoryConfirmed'=>true]);
+$international=gc_validate_company($international);$newProgram=gc_company_program($international);
+gift_check(gc_program_issues($newProgram)===[]&&$newProgram['country_code']==='TR'&&$newProgram['nominals']===[100000,20000000],'supplier form builds a complete international programme');
+$internationalTarget=dirname($target).'/Pina-international-filled-test.docx';gc_generate_contract(dirname(__DIR__).'/app/giftcards-template-international.docx',$internationalTarget,['contract_number'=>'PM-TR-TEST'],$international,null);$z=new ZipArchive();$z->open($internationalTarget);$internationalXml=$z->getFromName('word/document.xml');$z->close();
+gift_check(str_contains($internationalXml,'Турция')&&!str_contains($internationalXml,'Кыргызская Республика')&&!str_contains($internationalXml,'[страна регистрации эмитента]'),'international contract contains actual country throughout');
+gift_check(str_contains($internationalXml,'1 000, 200 000 RUB'),'contract lists actual selected denominations');
+$badCountry=$newProgram;$badCountry['country_code']='RU';gift_check(count(gc_program_issues($badCountry))>0,'Russian fulfilment not admitted under current offer');
+echo "PASS: international country, categories, denomination and contract mapping\n";

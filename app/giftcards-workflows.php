@@ -5,7 +5,8 @@ function gc_atomic(callable $f):mixed {return db()->inTransaction()?$f():transac
 
 /** Access to an operational object is always checked before storing or serving its files. */
 function gc_program_location(array $p):void {
- if(empty($p['fulfillment_address'])||!is_string($p['fulfillment_address'])||mb_strlen($p['fulfillment_address'])>500||($p['delivery_to_rf']??null)!==false||($p['digital_services']??null)!==false)throw new ApiError('Подтвердите фактический адрес исполнения в Кыргызстане и отсутствие выдачи в РФ. Электронные и финансовые услуги по этой программе исключены.',409);
+ gc_program_country($p);
+ if(empty($p['fulfillment_address'])||!is_string($p['fulfillment_address'])||mb_strlen($p['fulfillment_address'])>500||($p['delivery_to_rf']??null)!==false||($p['digital_services']??null)!==false)throw new ApiError('Подтвердите страну и фактический адрес исполнения за пределами РФ и отсутствие выдачи в РФ. Электронные и финансовые услуги по этой программе исключены.',409);
 }
 function gc_object_access(string $kind,string $id,array $actor):array {
  $issuer=null;$client=null;

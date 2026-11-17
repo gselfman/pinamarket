@@ -1,5 +1,5 @@
 // Demonstration domain only. Never connect this storage or these transitions to real payments.
-export const DENOMINATIONS = [10000, 50000, 100000, 500000, 1000000, 5000000];
+export const DENOMINATIONS = [1000, 2000, 3000, 5000, 10000, 20000, 25000, 50000, 100000, 200000, 300000, 500000, 1000000, 2000000, 3000000, 5000000];
 export const PARTNERS = [
   {id:'auto', name:'Автомобили и подбор', issuer:'Демо-поставщик автомобилей', category:'Автомобили', mark:'АВ', color:'sage', icon:'car', description:'Подбор и покупка автомобиля у компании в Кыргызстане.', use:'Подбор автомобиля или покупка по договору с поставщиком.'},
   {id:'parts', name:'Запчасти и комплектующие', issuer:'Демо-поставщик запчастей', category:'Запчасти', mark:'ЗЧ', color:'sand', icon:'parts', description:'Детали и консультация по подбору у зарубежного поставщика.', use:'Запчасти и услуги подбора, указанные в договоре поставщика.'},

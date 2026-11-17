@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {seedState,createOrder,transition,findCard,cardStatus} from '../model.mjs';
-import {ensureMerchant,acceptMerchantCode,acknowledgeSettlement,merchantTotals,registryCSV,companyFieldValue,companyFieldsHTML,programFormValues} from '../merchant.mjs';
+import {ensureMerchant,acceptMerchantCode,acknowledgeSettlement,merchantTotals,registryCSV,companyFieldValue,companyFieldsHTML,programFormValues,CARD_NOMINALS,DEFAULT_NOMINALS} from '../merchant.mjs';
 import {webcrypto} from 'node:crypto';
 globalThis.crypto??=webcrypto;
 const s=seedState();ensureMerchant(s);
@@ -36,3 +36,7 @@ assert.equal(programFormValues({issueTime:'Особый срок'},{issue_deadli
 assert.ok(companyFieldsHTML({}).includes('aria-describedby="co-issueTime-hint"'));
 assert.ok(companyFieldsHTML({rules:'https://example.com/?a="test"'}).includes('&quot;'));
 console.log('PASS: supplier recommendations preserve agreed terms and explicit expiry settings');
+
+assert.ok(CARD_NOMINALS.includes(100000)&&CARD_NOMINALS.includes(500000000));
+assert.deepEqual(DEFAULT_NOMINALS,[10000000,20000000,30000000,50000000,100000000,500000000]);
+assert.ok(companyFieldsHTML({country:'TR',category:'electronics'}).includes('value="TR" selected'));
