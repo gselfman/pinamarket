@@ -1,6 +1,28 @@
 <?php
 declare(strict_types=1);
 
+/** Read-only diagnostics: signing a company profile does not save a card programme. */
+function gc_program_issues(mixed $program):array {
+ $p=is_array($program)?$program:[];$issues=[];
+ $nominals=$p['nominals']??null;
+ if(!is_array($nominals)||!count($nominals))$issues[]='Выберите хотя бы один доступный номинал карты';
+ elseif(array_filter($nominals,fn($n)=>!is_int($n)||!in_array($n,[1000000,5000000,10000000,50000000,100000000,500000000],true)))$issues[]='Проверьте допустимые номиналы карт';
+ $rules=$p['rules']??null;
+ if(!is_string($rules)||!filter_var($rules,FILTER_VALIDATE_URL)||parse_url($rules,PHP_URL_SCHEME)!=='https')$issues[]='Укажите HTTPS-ссылку на оферту по картам';
+ $seconds=$p['expires_seconds']??null;
+ if(!is_numeric($seconds)||(int)$seconds<1||(int)$seconds>31536000)$issues[]='Укажите допустимый срок действия карты, не более 365 дней';
+ foreach(['issue_deadline'=>'Укажите срок выпуска кода по запросу','request_deadline'=>'Укажите срок запроса кода после оплаты','use_country'=>'Укажите страну исполнения','redemption'=>'Заполните порядок погашения карты','refund'=>'Заполните порядок обращений и возврата'] as $key=>$message)if(!is_string($p[$key]??null)||trim($p[$key])==='')$issues[]=$message;
+ if(!is_string($p['fulfillment_address']??null)||trim($p['fulfillment_address'])===''||mb_strlen($p['fulfillment_address'])>500)$issues[]='Укажите фактический адрес исполнения в Кыргызстане';
+ if(($p['delivery_to_rf']??null)!==false)$issues[]='Подтвердите отсутствие выдачи товара и оказания услуг в России';
+ if(($p['digital_services']??null)!==false)$issues[]='Подтвердите исключение электронных услуг из программы';
+ if(($p['partial_redemption']??false)!==false)$issues[]='Укажите однократное полное погашение карты';
+ return $issues;
+}
+function gc_program_required(mixed $program):void {
+ $issues=gc_program_issues($program);
+ if($issues)throw new ApiError('Условия карт не сохранены или заполнены не полностью: '.implode('; ',$issues).'. Откройте «Условия карт» в карточке поставщика и сохраните программу.',409);
+}
+
 function gc_contract_version(array $issuer,?array $signature):string {
  return hash('sha256',file_get_contents(__DIR__.'/giftcards-template.docx').$issuer['company_json'].json_encode($signature).$issuer['contract_number']);
 }
