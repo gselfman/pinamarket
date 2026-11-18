@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {seedState,createOrder,transition,findCard,cardStatus} from '../model.mjs';
-import {ensureMerchant,acceptMerchantCode,acknowledgeSettlement,merchantTotals,registryCSV,companyFieldValue,companyFieldsHTML,programFormValues,CARD_NOMINALS,DEFAULT_NOMINALS} from '../merchant.mjs';
+import {ensureMerchant,acceptMerchantCode,acknowledgeSettlement,merchantTotals,registryCSV,companyFieldValue,companyFieldsHTML,programFormValues,CARD_NOMINALS,DEFAULT_NOMINALS,categoryLabels,selectedCategories} from '../merchant.mjs';
 import {webcrypto} from 'node:crypto';
 globalThis.crypto??=webcrypto;
 const s=seedState();ensureMerchant(s);
@@ -40,3 +40,8 @@ console.log('PASS: supplier recommendations preserve agreed terms and explicit e
 assert.ok(CARD_NOMINALS.includes(100000)&&CARD_NOMINALS.includes(500000000));
 assert.deepEqual(DEFAULT_NOMINALS,[10000000,20000000,30000000,50000000,100000000,500000000]);
 assert.ok(companyFieldsHTML({country:'TR',category:'electronics'}).includes('value="TR" selected'));
+
+assert.deepEqual(selectedCategories({category:'clothing'}),['clothing']);
+assert.deepEqual(selectedCategories({categories:['clothing','food','produce']}),['clothing','food','produce']);
+assert.ok(categoryLabels({categories:['clothing','food','produce']}).includes('Овощи и фрукты'));
+assert.ok(companyFieldsHTML({category:'clothing'}).includes('value="clothing" checked'));

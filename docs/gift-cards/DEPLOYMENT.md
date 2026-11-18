@@ -118,3 +118,8 @@ The installation package now applies additive migrations 004 (TOTP and audit), 0
 After updating, staff must enrol their authenticator and retain the ten recovery codes. New sales additionally require approval of the published offer, a current signed issuer contract and configured programme. See OPERATIONS.md and CONTRACT-COVERAGE.md. Bank communication and any approvals take place outside the website. No bank account/role, per-contract bank approval form or daily bank-review sales gate exists.
 
 The hosting installer retains the existing mail/worker schedules and adds the daily audit archive at 03:15 server time. The archive remains searchable and exportable. CLI bank import is documented in OPERATIONS.md; keep statement files and previews outside the public directory.
+
+
+### Order payments and shared supplier points
+
+Apply additive migrations 007 (`giftcards-order-payments.sql`) and 008 (`giftcards-shared-points.sql`) using the normal installer. No existing migration checksums or wallet records are rewritten. Configure the common Pina merchant UUID, login `PINA`, issuing-point UUID and secret once. Each supplier needs only its own point UUID and short login. Check bank cash addresses in the administration settings before issuing payment instructions.

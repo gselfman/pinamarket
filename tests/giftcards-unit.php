@@ -23,6 +23,13 @@ $international=gc_validate_company($international,true);gift_check(gc_validate_c
 gift_check(gc_program_issues($newProgram)===[]&&$newProgram['country_code']==='TR'&&$newProgram['nominals']===[100000,20000000],'supplier form builds a complete international programme');
 $internationalTarget=dirname($target).'/Pina-international-filled-test.docx';gc_generate_contract(dirname(__DIR__).'/app/giftcards-template-international.docx',$internationalTarget,['contract_number'=>'PM-TR-TEST'],$international,null);$z=new ZipArchive();$z->open($internationalTarget);$internationalXml=$z->getFromName('word/document.xml');$z->close();
 gift_check(str_contains($internationalXml,'Турция')&&!str_contains($internationalXml,'Кыргызская Республика')&&!str_contains($internationalXml,'[страна регистрации эмитента]'),'international contract contains actual country throughout');
-gift_check(str_contains($internationalXml,'1 000, 200 000 RUB'),'contract lists actual selected denominations');
+gift_check(str_contains($internationalXml,'1 000, 200 000 RUB'),'contract lists actual selected denominations');gift_check(str_contains($internationalXml,'Категории: Техника и оборудование'),'contract lists chosen category labels');
 $badCountry=$newProgram;$badCountry['country_code']='RU';gift_check(count(gc_program_issues($badCountry))>0,'Russian fulfilment not admitted under current offer');
 echo "PASS: international country, categories, denomination and contract mapping\n";
+
+gift_check(gc_category_values(['category'=>'clothing'])===['clothing'],'legacy single category retained');
+gift_check(gc_category_values(['categories'=>['clothing','food','produce','food']])===['food','produce','clothing'],'multiple categories validated and deduplicated');
+$point=['mode'=>'shared','merchantLogin'=>'PINA','siteLogin'=>'supplier','merchantId'=>'11111111-1111-4111-8111-111111111111','siteId'=>'22222222-2222-4222-8222-222222222222','recipientLogin'=>'PINA.supplier','hasApiKey'=>true];gift_check(gc_merchant_setup_issues($point)===[],'configured point has no missing settings');$point['siteId']='';$pointIssues=gc_merchant_setup_issues($point);gift_check(count($pointIssues)===1&&str_contains($pointIssues[0],'siteId'),'missing site identified with a human label');
+echo "PASS: multiple categories and supplier trading point readiness\n";
+
+$cash=gc_validate_cash_locations([['id'=>'cash-test','name'=>'Test bank','address'=>'Test address','active'=>true]]);gift_check(count($cash)===1&&$cash[0]['active'],'cash locations validate separately from customer money');$duplicateRejected=false;try{gc_validate_cash_locations([$cash[0],$cash[0]]);}catch(ApiError){$duplicateRejected=true;}gift_check($duplicateRejected,'duplicate cash-location IDs rejected');

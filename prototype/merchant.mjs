@@ -3,12 +3,20 @@ import {esc,money,date} from './legacy-ui.mjs';
 import {COUNTRIES} from './countries.mjs';
 export const CARD_NOMINALS=[100000,200000,300000,500000,1000000,2000000,2500000,5000000,10000000,20000000,30000000,50000000,100000000,200000000,300000000,500000000];
 export const DEFAULT_NOMINALS=[10000000,20000000,30000000,50000000,100000000,500000000];
-export const CATEGORIES=[['vehicles','Автомобили и запчасти'],['food','Продукты питания'],['clothing','Одежда, обувь и вещи'],['consumer_goods','Товары народного потребления'],['electronics','Техника и оборудование'],['software','Софт: установка и настройка на месте'],['other_services','Другие услуги']];
+export const CATEGORIES=[['vehicles','Автомобили и запчасти'],['food','Продукты питания'],['produce','Овощи и фрукты'],['clothing','Одежда, обувь и вещи'],['consumer_goods','Товары народного потребления'],['electronics','Техника и оборудование'],['software','Софт: установка и настройка на месте'],['other_services','Другие услуги']];
 export function countryFieldHTML(name,label,value='',{prefix='co-',disabled=false}={}) {
  const id=prefix+name;return `<div class="field"><label for="${id}">${label}</label><select id="${id}" name="${name}" required ${disabled?'disabled':''}><option value="">Выберите страну</option>${COUNTRIES.map(c=>`<option value="${c.code}" ${value===c.code?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>`;
 }
-export function categoryFieldHTML(value='',{prefix='co-',disabled=false}={}) {
- return `<div class="field"><label for="${prefix}category">Категория товаров или услуг</label><select id="${prefix}category" name="category" required ${disabled?'disabled':''}><option value="">Выберите категорию</option>${CATEGORIES.map(([code,label])=>`<option value="${code}" ${value===code?'selected':''}>${label}</option>`).join('')}</select><small class="note">Укажите конкретные товары или услуги в описании. Для цифровых лицензий, подписок и онлайн-доступа требуются отдельные условия: действующая оферта исключает электронные услуги.</small></div>`;
+export function selectedCategories(record={},fallback={}) {
+ if(Array.isArray(record.categories))return record.categories;
+ if(record.category)return [record.category];
+ if(Array.isArray(fallback.categories))return fallback.categories;
+ return fallback.category?[fallback.category]:[];
+}
+export function categoryLabels(record={},fallback={}) {return selectedCategories(record,fallback).map(code=>CATEGORIES.find(([key])=>key===code)?.[1]||code).join(', ');}
+export function categoryFieldHTML(value=[],{prefix='co-',disabled=false}={}) {
+ const selected=Array.isArray(value)?value:value?[value]:[];
+ return `<fieldset data-card-categories id="${prefix}category"><legend>Категории товаров и услуг</legend><p class="note">Можно выбрать несколько категорий. Укажите конкретные товары или услуги в описании.</p>${CATEGORIES.map(([code,label])=>`<label class="checkline" for="${prefix}category-${code}"><input id="${prefix}category-${code}" type="checkbox" name="categories" value="${code}" ${selected.includes(code)?'checked':''} ${disabled?'disabled':''}><span>${label}</span></label>`).join('')}<small class="note">Категория «Софт» — установка и настройка ПО на месте вне РФ. Цифровые лицензии, подписки и онлайн-доступ требуют отдельных условий.</small></fieldset>`;
 }
 export function nominalFieldsHTML(company={},program={},disabled=false) {
  const selected=Array.isArray(company.nominals)&&company.nominals.length?company.nominals:Array.isArray(program.nominals)&&program.nominals.length?program.nominals:DEFAULT_NOMINALS;
@@ -36,7 +44,7 @@ export function companyFieldValue(company,key,program={}) {
 }
 export function companyFieldsHTML(company,{prefix='co-',disabled=false,program={}}={}) {
  const legacyCountry=['KG','Кыргызстан','Кыргызская Республика'].includes(program.use_country)?'KG':'';
- return countryFieldHTML('country','Страна регистрации компании',company.country||legacyCountry,{prefix,disabled})+categoryFieldHTML(company.category||program.category||'',{prefix,disabled})+COMPANY_FIELDS.map(([key,label,type])=>{
+ return countryFieldHTML('country','Страна регистрации компании',company.country||legacyCountry,{prefix,disabled})+categoryFieldHTML(selectedCategories(company,program),{prefix,disabled})+COMPANY_FIELDS.map(([key,label,type])=>{
   const id=prefix+key,recommendation=COMPANY_RECOMMENDATIONS[key],value=esc(String(companyFieldValue(company,key,program)));
   const attrs=`id="${id}" name="${key}" required maxlength="500" ${disabled?'disabled':''} ${recommendation?`aria-describedby="${id}-hint"`:''}`;
   const control=key==='redemption'?`<textarea ${attrs} rows="3">${value}</textarea>`:`<input ${attrs} type="${type}" value="${value}">`;
@@ -47,7 +55,7 @@ export function programFormValues(company,program={}) {
  const validity=companyFieldValue(company,'validity',program);
  const match=String(validity).trim().match(/^(\d+)\s*(?:день|дня|дней|дн\.?)(?:\s+со\s+дня\s+выпуска(?:\s+кода)?)?\.?$/iu);
  const days=filled(company.validity)?(match?Number(match[1]):''):(program.days??(Number(program.expires_seconds)>0?Number(program.expires_seconds)/86400:match?Number(match[1]):''));
- return {...program,days,category:company.category||program.category||'',country_code:company.fulfillmentCountry||program.country_code||(['KG','Кыргызстан','Кыргызская Республика'].includes(program.use_country)?'KG':company.country||''),rules:companyFieldValue(company,'rules',program),issue_deadline:companyFieldValue(company,'issueTime',program),request_deadline:companyFieldValue(company,'requestTime',program),redemption:companyFieldValue(company,'redemption',program)};
+ return {...program,days,categories:selectedCategories(company,program),category:company.category||program.category||'',country_code:company.fulfillmentCountry||program.country_code||(['KG','Кыргызстан','Кыргызская Республика'].includes(program.use_country)?'KG':company.country||''),rules:companyFieldValue(company,'rules',program),issue_deadline:companyFieldValue(company,'issueTime',program),request_deadline:companyFieldValue(company,'requestTime',program),redemption:companyFieldValue(company,'redemption',program)};
 }
 export function ensureMerchant(s) {s.merchant??={partner:'auto',company:{},contract:null,uploaded:null,acks:[]};return s.merchant;}
 export function merchantCards(s) {const m=ensureMerchant(s);return s.orders.filter(o=>o.partner===m.partner).flatMap(order=>order.cards.filter(c=>c.redemption==='redeemed').map(card=>({order,card})));}

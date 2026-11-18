@@ -16,8 +16,8 @@ function gc_run_one():bool {
    // remains a claim against an issued card; it never causes an untracked second issue.
    if($card['refund_status']!=='none')throw new VdarRejected('REFUND_PENDING');
    $snapshot=json_decode($card['snapshot_json'],true,512,JSON_THROW_ON_ERROR);
-   $recipient=$snapshot['vdar_recipient']??null;if(!$recipient)throw new RuntimeException('RECIPIENT_NOT_CONFIGURED');
-   $expires=(int)($snapshot['program']['expires_seconds']??0);
+   $recipient=$snapshot['vdar_recipient']??null;if(!is_string($recipient)||!preg_match('/^[\p{L}\p{N}_-]+\.[\p{L}\p{N}_-]+$/uD',$recipient))throw new VdarRejected('RECIPIENT_POINT_REQUIRED');
+   $source=gc_credentials('pina');if(!empty($snapshot['vdar_source_site_id'])&&$snapshot['vdar_source_site_id']!==$source['site_id'])throw new VdarRejected('SOURCE_POINT_MISMATCH');$expires=(int)($snapshot['program']['expires_seconds']??0);
    $result=gc_provider()->generate((int)$card['nominal_minor'],'PINA-'.$id,$recipient,$card['payment_id'],$expires);
    $encrypted=gc_encrypt($result['code']);$codeHash=gc_code_hash($result['code']);
    transact(function()use($id,$result,$command,$encrypted,$codeHash){query("UPDATE pg_cards SET issuance_status='issued',provider_id=?,code_ciphertext=?,code_hash=?,expires_at=?,updated_at=? WHERE id=?",[$result['id'],$encrypted,$codeHash,!empty($result['expires_at'])?gmdate('Y-m-d H:i:s',strtotime($result['expires_at'])):null,now(),$id]);query("UPDATE pg_commands SET status='completed',completed_at=? WHERE id=?",[now(),$command['id']]);gc_card_mail($id,'Код карты Pina Market готов','Доступ к коду открыт в личном кабинете. Передавайте код только выбранному поставщику.');audit(null,'gift_code_created',$id);});
@@ -25,9 +25,9 @@ function gc_run_one():bool {
    $activation=one('SELECT * FROM pg_activations WHERE id=?',[$command['activation_id']]);
    if(!$activation||$activation['issuer_id']!==$card['issuer_id'])throw new RuntimeException('ACTIVATION_MISMATCH');
    if($card['refund_status']!=='none')throw new VdarRejected('REFUND_PENDING');
-   $code=gc_decrypt($card['code_ciphertext']);$provider=gc_provider($card['issuer_id']);$info=$provider->check($code);
+   $snapshot=json_decode($card['snapshot_json'],true,512,JSON_THROW_ON_ERROR);$expectedRecipient=$snapshot['vdar_recipient']??$issuer['recipient_login'];$credentials=gc_credentials($card['issuer_id']);if(!empty($snapshot['vdar_site_id'])&&$snapshot['vdar_site_id']!==$credentials['site_id'])throw new VdarRejected('POINT_MISMATCH');$code=gc_decrypt($card['code_ciphertext']);$provider=gc_provider($card['issuer_id']);$info=$provider->check($code);
    if(($info['status']??'')==='activated')throw new VdarUncertain('EXTERNAL_ACTIVATION_REQUIRES_RECONCILIATION');
-   if(($info['exists']??false)!==true||($info['is_valid']??false)!==true||($info['recipient_login']??'')!==$issuer['recipient_login']||($info['currency_code']??'')!=='RUB'||VdarClient::minor($info['amount']??'0')!==(int)$card['nominal_minor'])throw new VdarRejected('CODE_NOT_VALID_FOR_ISSUER');
+   if(($info['exists']??false)!==true||($info['is_valid']??false)!==true||($info['recipient_login']??'')!==$expectedRecipient||($info['currency_code']??'')!=='RUB'||VdarClient::minor($info['amount']??'0')!==(int)$card['nominal_minor'])throw new VdarRejected('CODE_NOT_VALID_FOR_ISSUER');
    $result=$provider->activate($code);
    if(VdarClient::minor($result['activated_amount']??'0')!==(int)$card['nominal_minor'])throw new VdarUncertain('ACTIVATION_AMOUNT_MISMATCH');
    $commission=VdarClient::minor($result['commission_charged']??'0');

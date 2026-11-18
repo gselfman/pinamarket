@@ -1,3 +1,4 @@
+import {categoryLabels} from './merchant.mjs';
 import {COUNTRIES} from './countries.mjs';
 // The real signing service, numbering and signature key must live on the server.
 // This browser generator produces a clearly numbered DEMO draft from the agreed Word template.
@@ -26,7 +27,7 @@ export async function generateContract(company,record) {
  setText(cells[5],`${company.role}\n${company.director}\nПодпись __________________`);
  const values={
  'Эмитент и фактический поставщик':`${company.name}, рег. № ${company.reg}, налоговый № ${company.tax}, ${company.address}, ${company.email}, ${company.phone}. Эмитент является стороной основного договора и отвечает за привлеченных им исполнителей.`,
- 'Товары или услуги и место исполнения':`${company.goods}. Место исполнения: ${fulfillment}, ${company.fulfillmentAddress||'[фактический адрес]'}. Получение товара и оказание услуг в РФ не предусмотрены. Электронные и финансовые услуги исключены.`,
+ 'Товары или услуги и место исполнения':`${company.categories?.length?'Категории: '+categoryLabels(company)+'. ':''}${company.goods}. Место исполнения: ${fulfillment}, ${company.fulfillmentAddress||'[фактический адрес]'}. Получение товара и оказание услуг в РФ не предусмотрены. Электронные и финансовые услуги исключены.`,
  'Правила карты и основного договора':`Оферта Pina Market от 16.11.2026: https://pina.market/giftcards/#/legal/terms. Правила карты и основной покупки: ${company.rules}. Условия программы закреплены настоящим Приложением; применимые редакции сохраняются для каждого заказа.`,
  'Номиналы и валюта':`${(company.nominals||[]).map(n=>(n/100).toLocaleString('ru-RU')).join(', ')} RUB. Цена для покупателя соответствует номиналу. Доступные номиналы и лимиты согласуются до открытия продаж.`,
  'Выпуск и действие':`Срок выпуска по запросу: ${company.issueTime}. Срок запроса выпуска: ${company.requestTime}. Срок действия после выпуска: ${company.validity}. Последствия истечения не исключают предусмотренные законом денежные требования.`,

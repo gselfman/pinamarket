@@ -1,9 +1,10 @@
+import {categoryLabels} from './merchant.js';
 import {COUNTRIES} from './countries.js';
 // The real signing service, numbering and signature key must live on the server.
 // This browser generator produces a clearly numbered DEMO draft from the agreed Word template.
 export async function generateContract(company,record) {
  const country=COUNTRIES.find(c=>c.code===company.country)?.name||'Кыргызская Республика',fulfillment=COUNTRIES.find(c=>c.code===company.fulfillmentCountry)?.name||country;
- const source=await fetch('/giftcards/r-c022ccc459d7859c/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
+ const source=await fetch('/giftcards/r-98dc7731b9c355d0/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
  const zip=await window.JSZip.loadAsync(await source.arrayBuffer()),path='word/document.xml',xml=await zip.file(path).async('string'),doc=new DOMParser().parseFromString(xml,'application/xml'),ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
  if(doc.querySelector('parsererror'))throw Error('Не удалось прочитать шаблон.');
  const text=e=>[...e.getElementsByTagNameNS(ns,'t')].map(n=>n.textContent).join('');
@@ -26,7 +27,7 @@ export async function generateContract(company,record) {
  setText(cells[5],`${company.role}\n${company.director}\nПодпись __________________`);
  const values={
  'Эмитент и фактический поставщик':`${company.name}, рег. № ${company.reg}, налоговый № ${company.tax}, ${company.address}, ${company.email}, ${company.phone}. Эмитент является стороной основного договора и отвечает за привлеченных им исполнителей.`,
- 'Товары или услуги и место исполнения':`${company.goods}. Место исполнения: ${fulfillment}, ${company.fulfillmentAddress||'[фактический адрес]'}. Получение товара и оказание услуг в РФ не предусмотрены. Электронные и финансовые услуги исключены.`,
+ 'Товары или услуги и место исполнения':`${company.categories?.length?'Категории: '+categoryLabels(company)+'. ':''}${company.goods}. Место исполнения: ${fulfillment}, ${company.fulfillmentAddress||'[фактический адрес]'}. Получение товара и оказание услуг в РФ не предусмотрены. Электронные и финансовые услуги исключены.`,
  'Правила карты и основного договора':`Оферта Pina Market от 16.11.2026: https://pina.market/giftcards/#/legal/terms. Правила карты и основной покупки: ${company.rules}. Условия программы закреплены настоящим Приложением; применимые редакции сохраняются для каждого заказа.`,
  'Номиналы и валюта':`${(company.nominals||[]).map(n=>(n/100).toLocaleString('ru-RU')).join(', ')} RUB. Цена для покупателя соответствует номиналу. Доступные номиналы и лимиты согласуются до открытия продаж.`,
  'Выпуск и действие':`Срок выпуска по запросу: ${company.issueTime}. Срок запроса выпуска: ${company.requestTime}. Срок действия после выпуска: ${company.validity}. Последствия истечения не исключают предусмотренные законом денежные требования.`,
