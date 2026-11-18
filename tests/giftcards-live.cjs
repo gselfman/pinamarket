@@ -22,7 +22,7 @@ check((await page.getByRole('dialog').innerText()).includes('Складочна�
 await page.getByRole('dialog').getByRole('button',{name:'Закрыть',exact:true}).click();
 check((await page.locator('.order-list').innerText()).includes('В обработке'),'payment request remains in processing before bank confirmation');
 await page.goto(base+'#/account/cards');const unpaidCards=page.locator('.account-card').filter({hasText:'Заказ № 2001'});check(await unpaidCards.locator('[data-action=live-issue]').count()===0,'unpaid cards cannot be issued');
-newOrder.payment_status='confirmed';await page.goto(base+'#/account/orders');await page.goto(base+'#/account/cards');check(await page.locator('.account-card').filter({hasText:'Заказ № 2001'}).locator('[data-action=live-issue]').count()===2,'confirmed payment unlocks individual codes for both cards');
+newOrder.payment_status='confirmed';await page.goto(base+'#/account/orders');await page.locator('.order-row').filter({hasText:'Заказ № 2001'}).locator('.order-row-status.paid').waitFor();await page.goto(base+'#/account/cards');await page.locator('.account-card').filter({hasText:'Заказ № 2001'}).locator('[data-action=live-issue]').nth(1).waitFor();check(await page.locator('.account-card').filter({hasText:'Заказ № 2001'}).locator('[data-action=live-issue]').count()===2,'confirmed payment unlocks individual codes for both cards');
 check(!mutations.some(x=>x.route==='cards/issue/'&&String(x.data.cardId).startsWith('new-order')),'bank confirmation does not automatically issue codes');
 // A newly connected supplier receives editable recommendations without an automatic save.
 const savedProgram=state.issuers[0].program,savedStatus=state.issuers[0].status;state.issuers[0].program={};state.issuers[0].status='review';
