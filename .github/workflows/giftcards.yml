@@ -67,7 +67,11 @@ jobs:
           PINA_ARTIFACT_DIR: ${{ runner.temp }}
         run: |
           npm install --prefix "$RUNNER_TEMP/pina-gift-ui" playwright@1.61.0
-          "$RUNNER_TEMP/pina-gift-ui/node_modules/.bin/playwright" install --with-deps chromium
+          if command -v google-chrome >/dev/null 2>&1; then
+            export PINA_BROWSER="$(command -v google-chrome)"
+          else
+            "$RUNNER_TEMP/pina-gift-ui/node_modules/.bin/playwright" install --with-deps chromium
+          fi
           python3 -m http.server 4173 --bind 127.0.0.1 --directory prototype > "$RUNNER_TEMP/pina-gift-http.log" 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
