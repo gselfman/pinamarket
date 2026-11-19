@@ -22,6 +22,15 @@ function setting(string $key,string $label,string $default=''):string{
 function put_private(string $path,string $content):void{$tmp=$path.'.new';if(file_put_contents($tmp,$content,LOCK_EX)===false)throw new RuntimeException('Не удалось записать '.$path);chmod($tmp,0600);if(!rename($tmp,$path))throw new RuntimeException('Не удалось сохранить '.$path);}
 function copy_tree(string $src,string $dst):void{if(!is_dir($dst))mkdir($dst,0755,true);chmod($dst,0755);foreach(array_diff(scandir($src),['.','..']) as $name){$from=$src.'/'.$name;$to=$dst.'/'.$name;if(is_dir($from)&&!is_link($from))copy_tree($from,$to);else{if(!copy($from,$to))throw new RuntimeException('Не удалось сохранить каталог проверки сертификата.');chmod($to,0644);}}}
 function copy_file(string $src,string $dst,int $mode=0644):void{$tmp=$dst.'.pina-new';if(!copy($src,$tmp))throw new RuntimeException('Не удалось скопировать '.$dst);chmod($tmp,$mode);if(!rename($tmp,$dst))throw new RuntimeException('Не удалось заменить '.$dst);}
+// Preserve the previous tree as data. Never execute another financial application at /V0.
+function archive_v0(string $src,string $dst):void{
+ if(!mkdir($dst,0700))throw new RuntimeException('Не создан закрытый архив V0');
+ foreach(array_diff(scandir($src),['.','..']) as $name){$from=$src.'/'.$name;$to=$dst.'/'.$name;
+  if(is_link($from)){if(!symlink(readlink($from),$to))throw new RuntimeException('Не сохранена ссылка V0');}
+  elseif(is_dir($from))archive_v0($from,$to);
+  else copy_file($from,$to,0600);
+ }
+}
 try{
  if(PHP_VERSION_ID<80200)throw new RuntimeException('Нужен PHP 8.2 или новее.');
  foreach(['pdo_mysql','mbstring','openssl','session','json'] as $ext)if(!extension_loaded($ext))throw new RuntimeException('В выбранном PHP отсутствует расширение '.$ext.'. Включите его в панели.');
@@ -70,7 +79,9 @@ try{
  $fcgiWrapper=trim(getenv('PINA_FCGI_WRAPPER')?:($config['fcgi_wrapper']??''));
  if($fcgiWrapper!==''){if(!preg_match('~^/[a-zA-Z0-9_./-]+$~D',$fcgiWrapper)||!is_file($fcgiWrapper)||!is_executable($fcgiWrapper))throw new RuntimeException('Обработчик FastCGI не найден или не исполняемый: '.$fcgiWrapper);$config['fcgi_wrapper']=$fcgiWrapper;out('Веб-обработчик PHP FastCGI: '.$fcgiWrapper);}
 
- $initialPublish=!is_file($public.'/.pina-installed');
+ $archiveV0=in_array('--archive-v0',$argv,true);
+ if($archiveV0&&(!$update||file_exists($public.'/V0')||is_link($public.'/V0')))throw new RuntimeException('V0 уже существует или не выбрано обновление. Архив не перезаписан.');
+ $initialPublish=$archiveV0||!is_file($public.'/.pina-installed');
  if($initialPublish&&count(array_diff(scandir($public),['.','..','.well-known']))>0){
   out('В выбранном каталоге уже есть сайт. Перед заменой создаётся полный архив файлов.');
   if(getenv('PINA_REPLACE_SITE')!=='1'&&ask('Для замены выбранного сайта введите ЗАМЕНИТЬ')!=='ЗАМЕНИТЬ')throw new RuntimeException('Установка остановлена без замены сайта.');
@@ -110,6 +121,12 @@ try{
  $oldHadJson=is_file($public.'/pina-path.json');
  $publishDir=$public;
  if($initialPublish){$publishDir=dirname($public).'/.pinamarket-stage-'.$stamp;if(!mkdir($publishDir,0755))throw new RuntimeException('Не удалось создать временный каталог рядом с сайтом.');if(is_dir($public.'/.well-known'))copy_tree($public.'/.well-known',$publishDir.'/.well-known');}
+ if($archiveV0){
+  archive_v0($public,$publishDir.'/V0');
+  if(is_file($publishDir.'/V0/.htaccess')){if(!rename($publishDir.'/V0/.htaccess',$publishDir.'/V0/.pina-original-htaccess'))throw new RuntimeException('Не сохранён прежний .htaccess');}
+  copy_file($root.'/public/v0-deny.conf',$publishDir.'/V0/.htaccess',0600);
+  put_private($publishDir.'/V0/.pina-v0-archive',json_encode(['format'=>'pina-v0-archive-v1','created'=>gmdate('c'),'original_public'=>$public,'backup'=>$backup],JSON_THROW_ON_ERROR));
+ }
  // mkdir modes are restricted by the shell umask (077 in bootstrap). Nginx needs public traversal.
  if(!chmod($publishDir,0755))throw new RuntimeException('Не удалось установить права 0755 на публичный каталог.');
  $html=file_get_contents($root.'/dist/index.html');$tag=substr(hash('sha256',file_get_contents($root.'/dist/app.js').file_get_contents($root.'/dist/legal.js').file_get_contents($root.'/dist/style.css')),0,12);
@@ -120,9 +137,11 @@ try{
  put_private($releaseApp.'/config.php',"<?php\nreturn ".var_export($config,true).";\n");
  put_private($releaseApp.'/template.html',$html);
  $assetNames=['app.js','legal.js','style.css','pina-logo.png','favicon.ico'];foreach(array_merge(glob($root.'/dist/brand-*.png'),glob($root.'/dist/brand-*.svg'),glob($root.'/dist/favicon-*.png'),glob($root.'/dist/apple-touch-icon-*.png')) as $brandFile)$assetNames[]=basename($brandFile);
+ if(is_dir($root.'/dist/giftcards')){foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root.'/dist/giftcards',FilesystemIterator::SKIP_DOTS)) as $file)if($file->isFile())$assetNames[]='giftcards/'.substr($file->getPathname(),strlen($root.'/dist/giftcards/'));}
  $oldAssetNames=array_values(array_filter($assetNames,fn($name)=>is_file($public.'/'.$name)));
  $assetHashes=[];foreach($assetNames as $asset)$assetHashes[$asset]=hash_file('sha256',$root.'/dist/'.$asset);
  put_private($releaseApp.'/release.json',json_encode(['id'=>$stamp,'assets'=>$assetHashes],JSON_THROW_ON_ERROR));
+ if(is_dir($root.'/dist/giftcards'))copy_tree($root.'/dist/giftcards',$publishDir.'/giftcards');
  foreach($assetNames as $asset)copy_file($root.'/dist/'.$asset,$publishDir.'/'.$asset);
  foreach(['.htaccess','.user.ini'] as $asset)copy_file($root.'/public/'.$asset,$publishDir.'/'.$asset);
  if($fcgiWrapper!==''){
@@ -138,7 +157,7 @@ try{
  out('Файлы установлены. Админка: '.$config['base_url'].'/admin/');
  out('Проверка HTTPS и серверного приложения:');
  require_once __DIR__.'/verify.php';
- $verifyError=null;try{$checked=verify_site($config['base_url'],$stamp,$assetHashes);foreach($checked as $route)out('OK '.$route);}catch(Throwable $error){$verifyError=$error->getMessage();}
+ $verifyError=null;try{$checked=verify_site($config['base_url'],$stamp,$assetHashes,(bool)($config['giftcards']['enabled']??false));if($config['giftcards']['site_mode']??false){$home=deployment_http_get($config['base_url'].'/');if(!str_contains($home['body'],'pina-runtime'))throw new RuntimeException('Главная не переключена на подарочные карты');}if(is_dir($public.'/V0'))foreach(['/V0/','/V0/index.php','/V0/pina-path.json'] as $archivePath){$r=deployment_http_get($config['base_url'].$archivePath);if($r['error']!==''||!in_array($r['status'],[403,404],true))throw new RuntimeException('Архив V0 не закрыт от веб-доступа');}$publicationVerified=true;foreach($checked as $route)out('OK '.$route);}catch(Throwable $error){$verifyError=$error->getMessage();}
  if($verifyError!==null){
   out($verifyError);
   if($initialPublish&&isset($previous)&&is_dir($previous)){$failed=dirname($public).'/.pinamarket-failed-'.$stamp;if(rename($public,$failed)&&rename($previous,$public))throw new RuntimeException('HTTPS-проверка не прошла. Прежний сайт восстановлен. Проверьте SSL, DNS и путь каталога, затем повторите с --update. Настройки и база сохранены.');}

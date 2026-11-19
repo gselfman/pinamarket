@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import {seedState,createOrder,transition,findCard,cardStatus} from '../model.mjs';
+import {ensureMerchant,acceptMerchantCode,acknowledgeSettlement,merchantTotals,registryCSV,companyFieldValue,companyFieldsHTML,programFormValues,CARD_NOMINALS,DEFAULT_NOMINALS,categoryLabels,selectedCategories} from '../merchant.mjs';
+import {webcrypto} from 'node:crypto';
+globalThis.crypto??=webcrypto;
+const s=seedState();ensureMerchant(s);
+const o=createOrder(s,{partner:'auto',quantities:{10000:1,50000:1},email:'buyer@example.com'}),c=o.cards[0];
+assert.throws(()=>transition(s,'issue',c.id),/подтверждения оплаты/);
+assert.throws(()=>transition(s,'confirm_payment',o.id),/подтвердите email/);
+transition(s,'verify',o.id);transition(s,'confirm_payment',o.id);transition(s,'confirm_payment',o.id);
+transition(s,'issue',c.id,{unknown:true});assert.equal(c.issuance,'unknown');assert.throws(()=>transition(s,'issue',c.id),/результат/);
+transition(s,'reconcile',c.id);const code=c.code;assert.match(code,/^[A-Z0-9]{20}$/);transition(s,'issue',c.id);assert.equal(c.code,code);
+s.merchant.partner='parts';assert.throws(()=>acceptMerchantCode(s,{code,buyer:'Тест',contract:'№ 1'}),/не найден/);
+s.merchant.partner='auto';assert.throws(()=>acceptMerchantCode(s,{code,buyer:'',contract:'№ 1'}),/ФИО/);
+acceptMerchantCode(s,{code,buyer:'Демо Покупатель',contract:'№ 1'});assert.throws(()=>acceptMerchantCode(s,{code,buyer:'Тест',contract:'№ 2'}),/один раз/);
+assert.throws(()=>acknowledgeSettlement(s,{ids:[c.id],amount:9910,bankref:'test'}),/не готова/);
+transition(s,'settle',o.id);assert.equal(o.settlement,'partial');assert.equal(o.cards[1].settlement,undefined);
+assert.throws(()=>acknowledgeSettlement(s,{ids:[c.id],amount:100,bankref:'test'}),/не совпадает/);
+acknowledgeSettlement(s,{ids:[c.id],amount:9910,bankref:'test'});assert.equal(c.settlementConfirmed,true);assert.equal(c.releasedToPina,undefined);assert.equal(s.merchant.acks[0].balanceReview,'manual_review');assert.throws(()=>acknowledgeSettlement(s,{ids:[c.id],amount:9910,bankref:'test'}),/изменился/);
+const c2=o.cards[1];transition(s,'request_refund',c2.id,{reason:'Неиспользованная карта для тестового возврата'});assert.throws(()=>transition(s,'issue',c2.id),/приостановлены/);transition(s,'complete_refund',c2.id);assert.equal(cardStatus(o,c2)[0],'returned');
+transition(s,'request_refund',c.id,{reason:'Поставщик не выполнил услугу по договору'});assert.equal(c.refund,'requested');assert.throws(()=>transition(s,'complete_refund',c.id),/отдельная проверка/);
+assert.ok(!registryCSV(s).includes(code));assert.ok(merchantTotals(s).balance>=0);
+console.log('PASS: financial state transitions, issuer isolation, duplicate operations, unknown issue, refund and settlement checks');
+
+// Existing agreed terms must survive recommendations, particularly expiry settings.
+assert.equal(companyFieldValue({},'rules'),'https://pina.market/#/legal/terms');
+assert.equal(companyFieldValue({issueTime:'Два рабочих дня'},'issueTime'),'Два рабочих дня');
+assert.equal(companyFieldValue({},'issueTime',{issue_deadline:'Согласованный срок'}),'Согласованный срок');
+assert.equal(programFormValues({}).days,180);
+assert.equal(programFormValues({validity:'90 дней со дня выпуска кода'}).days,90);
+assert.equal(programFormValues({validity:'90 дней'},{days:180}).days,90);
+assert.equal(programFormValues({validity:'Один год'}).days,'');
+assert.equal(programFormValues({},{expires_seconds:90*86400}).days,90);
+assert.equal(programFormValues({}).request_deadline,'В течение 365 дней после подтверждения оплаты');
+assert.equal(programFormValues({issueTime:'Особый срок'},{issue_deadline:'Старый срок'}).issue_deadline,'Особый срок');
+assert.ok(companyFieldsHTML({}).includes('aria-describedby="co-issueTime-hint"'));
+assert.ok(companyFieldsHTML({rules:'https://example.com/?a="test"'}).includes('&quot;'));
+console.log('PASS: supplier recommendations preserve agreed terms and explicit expiry settings');
+
+assert.ok(CARD_NOMINALS.includes(100000)&&CARD_NOMINALS.includes(500000000));
+assert.deepEqual(DEFAULT_NOMINALS,[10000000,20000000,30000000,50000000,100000000,500000000]);
+assert.ok(companyFieldsHTML({country:'TR',category:'electronics'}).includes('value="TR" selected'));
+
+assert.deepEqual(selectedCategories({category:'clothing'}),['clothing']);
+assert.deepEqual(selectedCategories({categories:['clothing','food','produce']}),['clothing','food','produce']);
+assert.ok(categoryLabels({categories:['clothing','food','produce']}).includes('Овощи и фрукты'));
+assert.ok(companyFieldsHTML({category:'clothing'}).includes('value="clothing" checked'));

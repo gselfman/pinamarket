@@ -39,7 +39,7 @@ function deployment_http_get(string $url):array{
 }
 
 /** Check the deployed web server, not the source directory or PHP development router. */
-function verify_site(string $base,?string $expectedRelease=null,array $assets=[]):array{
+function verify_site(string $base,?string $expectedRelease=null,array $assets=[],bool $giftcards=false):array{
  $nonce=bin2hex(random_bytes(8));$checks=[];
  $get=function(string $path)use($base,$nonce):string{
   $response=deployment_http_get(rtrim($base,'/').$path.'?verify='.$nonce);
@@ -56,6 +56,7 @@ function verify_site(string $base,?string $expectedRelease=null,array $assets=[]
   $checks[]=$path;
  }
  foreach($assets as $name=>$hash){if(!hash_equals($hash,hash('sha256',$get('/'.$name))))throw new RuntimeException('Не совпадает файл /'.$name.'. Проверьте кеш и каталог домена.');$checks[]='/'.$name;}
+ if($giftcards){$body=$get('/giftcards/');if(!str_contains($body,'pina-runtime')||!str_contains($body,'live-app.js'))throw new RuntimeException('Не опубликован рабочий интерфейс подарочных карт');$api=json_decode($get('/api/gift/config/'),true);if(($api['mode']??'')!=='live'||empty($api['offer']['hash']))throw new RuntimeException('Не отвечает карточный API');$checks[]='/giftcards/';$checks[]='/api/gift/config/';}
  return $checks;
 }
 if(realpath($_SERVER['SCRIPT_FILENAME']??'')===__FILE__){

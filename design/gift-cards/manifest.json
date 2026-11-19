@@ -1,0 +1,194 @@
+[
+  {
+    "index": 1,
+    "name": "gift-card",
+    "symbol": "pina-gift-card",
+    "row": 1,
+    "column": 1,
+    "path": "icons/gift-card.svg"
+  },
+  {
+    "index": 2,
+    "name": "merchant",
+    "symbol": "pina-merchant",
+    "row": 1,
+    "column": 2,
+    "path": "icons/merchant.svg"
+  },
+  {
+    "index": 3,
+    "name": "customer",
+    "symbol": "pina-customer",
+    "row": 1,
+    "column": 3,
+    "path": "icons/customer.svg"
+  },
+  {
+    "index": 4,
+    "name": "email-verified",
+    "symbol": "pina-email-verified",
+    "row": 1,
+    "column": 4,
+    "path": "icons/email-verified.svg"
+  },
+  {
+    "index": 5,
+    "name": "invoice",
+    "symbol": "pina-invoice",
+    "row": 1,
+    "column": 5,
+    "path": "icons/invoice.svg"
+  },
+  {
+    "index": 6,
+    "name": "bank",
+    "symbol": "pina-bank",
+    "row": 1,
+    "column": 6,
+    "path": "icons/bank.svg"
+  },
+  {
+    "index": 7,
+    "name": "cash-payment",
+    "symbol": "pina-cash-payment",
+    "row": 2,
+    "column": 1,
+    "path": "icons/cash-payment.svg"
+  },
+  {
+    "index": 8,
+    "name": "shield-check",
+    "symbol": "pina-shield-check",
+    "row": 2,
+    "column": 2,
+    "path": "icons/shield-check.svg"
+  },
+  {
+    "index": 9,
+    "name": "private-code",
+    "symbol": "pina-private-code",
+    "row": 2,
+    "column": 3,
+    "path": "icons/private-code.svg"
+  },
+  {
+    "index": 10,
+    "name": "issue-on-request",
+    "symbol": "pina-issue-on-request",
+    "row": 2,
+    "column": 4,
+    "path": "icons/issue-on-request.svg"
+  },
+  {
+    "index": 11,
+    "name": "cart",
+    "symbol": "pina-cart",
+    "row": 2,
+    "column": 5,
+    "path": "icons/cart.svg"
+  },
+  {
+    "index": 12,
+    "name": "orders",
+    "symbol": "pina-orders",
+    "row": 2,
+    "column": 6,
+    "path": "icons/orders.svg"
+  },
+  {
+    "index": 13,
+    "name": "contract",
+    "symbol": "pina-contract",
+    "row": 3,
+    "column": 1,
+    "path": "icons/contract.svg"
+  },
+  {
+    "index": 14,
+    "name": "registry",
+    "symbol": "pina-registry",
+    "row": 3,
+    "column": 2,
+    "path": "icons/registry.svg"
+  },
+  {
+    "index": 15,
+    "name": "redemption",
+    "symbol": "pina-redemption",
+    "row": 3,
+    "column": 3,
+    "path": "icons/redemption.svg"
+  },
+  {
+    "index": 16,
+    "name": "settlement",
+    "symbol": "pina-settlement",
+    "row": 3,
+    "column": 4,
+    "path": "icons/settlement.svg"
+  },
+  {
+    "index": 17,
+    "name": "confirmed",
+    "symbol": "pina-confirmed",
+    "row": 3,
+    "column": 5,
+    "path": "icons/confirmed.svg"
+  },
+  {
+    "index": 18,
+    "name": "refund",
+    "symbol": "pina-refund",
+    "row": 3,
+    "column": 6,
+    "path": "icons/refund.svg"
+  },
+  {
+    "index": 19,
+    "name": "support",
+    "symbol": "pina-support",
+    "row": 4,
+    "column": 1,
+    "path": "icons/support.svg"
+  },
+  {
+    "index": 20,
+    "name": "location",
+    "symbol": "pina-location",
+    "row": 4,
+    "column": 2,
+    "path": "icons/location.svg"
+  },
+  {
+    "index": 21,
+    "name": "account-lock",
+    "symbol": "pina-account-lock",
+    "row": 4,
+    "column": 3,
+    "path": "icons/account-lock.svg"
+  },
+  {
+    "index": 22,
+    "name": "settings",
+    "symbol": "pina-settings",
+    "row": 4,
+    "column": 4,
+    "path": "icons/settings.svg"
+  },
+  {
+    "index": 23,
+    "name": "reports",
+    "symbol": "pina-reports",
+    "row": 4,
+    "column": 5,
+    "path": "icons/reports.svg"
+  },
+  {
+    "index": 24,
+    "name": "search",
+    "symbol": "pina-search",
+    "row": 4,
+    "column": 6,
+    "path": "icons/search.svg"
+  }
+]

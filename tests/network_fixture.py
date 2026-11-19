@@ -1,5 +1,7 @@
 """Isolated CI-only TLS/SMTP fixtures; no connection to real mailboxes or payment systems."""
 import http.client,http.server,ssl,socketserver,threading,sys
+from email import policy
+from email.parser import BytesParser
 cert,key=sys.argv[1:3]
 ctx=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);ctx.load_cert_chain(cert,key)
 class Proxy(http.server.BaseHTTPRequestHandler):
@@ -17,13 +19,17 @@ class Proxy(http.server.BaseHTTPRequestHandler):
 class Mail(socketserver.StreamRequestHandler):
  def handle(self):
   def reply(t):self.wfile.write((t+'\r\n').encode());self.wfile.flush()
-  reply('220 smtp.install.test ESMTP');auth=0;data=False
+  reply('220 smtp.install.test ESMTP');auth=0;data=False;message_lines=[]
   while True:
    line=self.rfile.readline()
    if not line:return
    line=line.rstrip(b'\r\n')
    if data:
-    if line==b'.':data=False;reply('250 Queued for CI test')
+    if line==b'.':
+     message=BytesParser(policy=policy.default).parsebytes(b'\r\n'.join(message_lines))
+     valid=not message.defects and message.get_body(preferencelist=('html',)) is not None and message.get_body(preferencelist=('plain',)) is not None
+     data=False;message_lines=[];reply('250 Queued for CI test' if valid else '554 Invalid multipart message')
+    else:message_lines.append(line)
     continue
    if auth==1:auth=2;reply('334 UGFzc3dvcmQ6');continue
    if auth==2:auth=0;reply('235 Authenticated');continue

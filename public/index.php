@@ -19,6 +19,20 @@ header('Content-Type: text/html; charset=utf-8');
 header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');header('X-Frame-Options: DENY');header('Referrer-Policy: strict-origin-when-cross-origin');header("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
 $path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH)?:'/';
 if(str_starts_with($path,'/api/')){require $appDir.'/api.php';exit;}
+// The public admin address serves the current application directly. Historical
+// operations remain available only through the explicit legacy link.
+$giftAdmin=($config['giftcards']['site_mode']??false)&&rtrim($path,'/')==='/admin'&&($_GET['legacy']??'')!=='1';
+if($giftAdmin&&$path!=='/admin/'){
+ $query=parse_url($_SERVER['REQUEST_URI'],PHP_URL_QUERY);
+ header('Location: /admin/'.($query!==null?'?'.$query:''),true,308);exit;
+}
+if($path==='/giftcards'){header('Location: /giftcards/',true,308);exit;}
+if($giftAdmin||$path==='/giftcards/'||($path==='/'&&($config['giftcards']['site_mode']??false))){
+ if(!($config['giftcards']['enabled']??false)){http_response_code(503);exit('Карточная программа пока не открыта. mail@pina.market');}
+ if(!is_file($appDir.'/giftcards-shell.html')){http_response_code(503);exit('Не установлен интерфейс карточной программы.');}
+ $giftRelease=is_file($appDir.'/release.json')?json_decode(file_get_contents($appDir.'/release.json'),true):[];
+ echo str_replace('</head>','<meta name="pina-release" content="'.htmlspecialchars($giftRelease['id']??'source',ENT_QUOTES,'UTF-8').'"></head>',file_get_contents($appDir.'/giftcards-shell.html'));exit;
+}
 // Keep previously published document links usable after replacing the old storefront.
 $legacy=['/privacy'=>'/documents/privacy/','/publichnaya-oferta'=>'/documents/terms/','/offer'=>'/documents/terms/'];
 if(isset($legacy[rtrim($path,'/')])){header('Location: '.$legacy[rtrim($path,'/')],true,301);exit;}
