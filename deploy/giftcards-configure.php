@@ -15,7 +15,8 @@ try{
  elseif($action==='--disable-sales'){$g['sales_enabled']=false;}
  elseif($action==='--enable-sales'){
   require_once $root.'/app/bootstrap.php';require_once $root.'/app/giftcards.php';$pina=gc_credentials('pina');
-  if(empty($g['legal_approved'])||empty($g['payment_instructions'])||empty($pina['api_key'])||empty($g['agent_signature_approved'])||($g['balance_return_mode']??'unconfirmed')==='unconfirmed')throw new RuntimeException('Не согласованы оферта, канал оплаты, ключи, подпись или возврат учётного остатка. Продажи не включены.');$g['enabled']=true;$g['sales_enabled']=true;
+  $checklist=gc_admin_checklist();foreach(['pina','signature','legal','supplier'] as $item)if(!$checklist[$item])throw new RuntimeException('Не завершён пункт подключения: '.$item.'. Поддерживается подпись на сайте или принятый договор с обеими подписями вне сайта.');
+  if((gc_settings()['balance_return_mode']??'unconfirmed')==='unconfirmed')throw new RuntimeException('Не согласован возврат учётного остатка. Продажи не включены.');$g['enabled']=true;$g['sales_enabled']=true;
  }
  elseif($action==='--manual-balance-return'){$g['balance_return_mode']='manual';}
  elseif($action==='--switch-home'){$g['site_mode']=true;}

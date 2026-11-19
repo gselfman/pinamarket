@@ -5,7 +5,7 @@ require_once __DIR__.'/notifications.php';
 if(!function_exists('send_message')) require_once __DIR__.'/mail.php';
 header('Cache-Control: no-store');header('X-Content-Type-Options: nosniff');header('X-Frame-Options: DENY');
 function api_route(string $route,string $method):mixed {
- $post=$method==='POST';$get=$method==='GET';$upload=in_array($route,['gift/documents/upload/','gift/admin/signature-upload/','gift/admin/bank-import/','gift/cases/upload/','gift/admin/evidence-upload/','gift/files/upload/'],true);$d=$post?($upload?$_POST:input()):[];
+ $post=$method==='POST';$get=$method==='GET';$upload=in_array($route,['gift/documents/upload/','gift/admin/documents-upload/','gift/admin/signature-upload/','gift/admin/bank-import/','gift/cases/upload/','gift/admin/evidence-upload/','gift/files/upload/'],true);$d=$post?($upload?$_POST:input()):[];
  if($post)csrf_check();
  if(str_starts_with($route,'gift/')){require_once __DIR__.'/giftcards.php';return giftcards_route(substr($route,5),$method,$d);}
  if($post&&in_array($route,['deposits/','orders/'],true)&&(cfg()['giftcards']['site_mode']??false))throw new ApiError('Для новых покупок выберите карту компании. Прежние заявки доступны в истории.',409);
