@@ -63,10 +63,7 @@ function gc_contract_version(array $issuer,?array $signature):string {
 function gc_issuer_sales_required(array $issuer):void {
  $credentials=gc_credentials($issuer['id']);if($credentials['mode']!=='shared'||($issuer['recipient_login']??'')!==$credentials['recipient_login']||($issuer['vdar_site_id']??'')!==$credentials['site_id'])throw new ApiError('Для новых заказов настройте торговую точку поставщика под общим мерчантом Pina Market',409);
  gc_program_location(json_decode($issuer['program_json'],true,512,JSON_THROW_ON_ERROR));
- require_once __DIR__.'/giftcards-documents.php';
- $expected=gc_contract_version($issuer,gc_signature_config());
- if($issuer['contract_status']!=='approved'||!hash_equals($expected,(string)$issuer['contract_version']))throw new ApiError('Для новых продаж необходим подписанный договор по актуальному шаблону',409);
- if(!one("SELECT id FROM pg_documents WHERE issuer_id=? AND kind='signed_contract' AND status='approved' AND version=?",[$issuer['id'],$expected]))throw new ApiError('Проверьте подписанный экземпляр текущей редакции',409);
+ if($issuer['contract_status']!=='approved'||!gc_approved_contract($issuer))throw new ApiError('Для новых продаж необходим принятый подписанный договор с текущими реквизитами и условиями карт',409);
 }
 function gc_legal_sales_ready():bool {
  $g=gc_settings();

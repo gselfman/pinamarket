@@ -15,12 +15,31 @@ function gc_document_route(string $route,string $method,array $d,array $actor):m
  if($route==='documents/contract/'&&$method==='GET'){$issuer=(string)($_GET['issuerId']??'');gc_document_access($actor,$issuer,['owner','accountant']);$i=one('SELECT contract_number,contract_version FROM pg_issuers WHERE id=?',[$issuer]);$doc=one("SELECT * FROM pg_documents WHERE issuer_id=? AND kind='generated_contract' AND version=? ORDER BY created_at DESC LIMIT 1",[$issuer,$i['contract_version']]);if(!$doc)throw new ApiError('Сначала подготовьте договор',409);gc_send_document($doc,$i['contract_number'].'.docx');}
  if($route==='documents/prepare/'&&$method==='POST'){
   if($actor['is_staff']??false)gc_admin_guard('documents-prepare/','POST',$actor);
-  $issuer=txt($d,'issuerId',36);gc_document_access($actor,$issuer,['owner','accountant']);$i=one('SELECT * FROM pg_issuers WHERE id=?',[$issuer]);$co=json_decode($i['company_json'],true,512,JSON_THROW_ON_ERROR);
-  require_once __DIR__.'/giftcards-operations.php';$co=gc_validate_company($co);
-  $template=gc_contract_template($i);$signature=gc_signature_config();$version=gc_contract_version($i,$signature);
-  $existing=one("SELECT * FROM pg_documents WHERE issuer_id=? AND kind='generated_contract' AND version=?",[$issuer,$version]);
-  if(!$existing){$id=gc_uuid();$storage=$id.'.docx';$path=gc_storage().'/'.$storage;gc_generate_contract($template,$path,$i,$co,$signature);$hash=hash_file('sha256',$path);transact(function()use($id,$issuer,$version,$storage,$path,$hash,$actor,$signature){query("INSERT INTO pg_documents(id,issuer_id,kind,version,storage_name,original_name,mime,size_bytes,sha256,status,uploaded_by,created_at) VALUES(?,?,'generated_contract',?,?,?,?,?,?,?,?,?)",[$id,$issuer,$version,$storage,'agency-contract.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document',filesize($path),$hash,$signature?'agent_signed':'draft',$actor['id'],now()]);query('UPDATE pg_issuers SET contract_version=?,contract_hash=?,contract_status=? WHERE id=?',[$version,$hash,$signature?'agent_signed':'draft',$issuer]);audit((int)$actor['id'],'gift_contract_generated',$id);});$existing=one('SELECT * FROM pg_documents WHERE id=?',[$id]);}
-  return ['id'=>$existing['id'],'status'=>$existing['status'],'downloadUrl'=>'/api/gift/documents/contract/?issuerId='.$issuer];
+  $issuer=txt($d,'issuerId',36);gc_document_access($actor,$issuer,['owner','accountant']);
+  return transact(function()use($issuer,$actor){
+   $i=one('SELECT * FROM pg_issuers WHERE id=? FOR UPDATE',[$issuer]);$co=json_decode($i['company_json'],true,512,JSON_THROW_ON_ERROR);
+   require_once __DIR__.'/giftcards-operations.php';$co=gc_validate_company($co);
+   $approved=gc_approved_contract($i);
+   if(($approved['signing_method']??'')==='manual'){
+    $source=one("SELECT * FROM pg_documents WHERE issuer_id=? AND kind='generated_contract' AND version=? ORDER BY created_at DESC,id LIMIT 1",[$issuer,$approved['version']]);
+    if($source&&gc_contract_file_valid($source))return ['id'=>$source['id'],'status'=>$source['status'],'downloadUrl'=>'/api/gift/documents/contract/?issuerId='.$issuer];
+   }
+   $template=gc_contract_template($i);$signature=gc_signature_config();$version=gc_contract_version($i,$signature);
+   $existing=one("SELECT * FROM pg_documents WHERE issuer_id=? AND kind='generated_contract' AND version=? ORDER BY created_at DESC,id LIMIT 1",[$issuer,$version]);
+   if(!$existing){
+    $id=gc_uuid();$storage=$id.'.docx';$path=gc_storage().'/'.$storage;
+    try{gc_generate_contract($template,$path,$i,$co,$signature);$hash=hash_file('sha256',$path);
+     query("INSERT INTO pg_documents(id,issuer_id,kind,version,storage_name,original_name,mime,size_bytes,sha256,status,uploaded_by,created_at) VALUES(?,?,'generated_contract',?,?,?,?,?,?,?,?,?)",[$id,$issuer,$version,$storage,'agency-contract.docx','application/vnd.openxmlformats-officedocument.wordprocessingml.document',filesize($path),$hash,$signature?'agent_signed':'draft',$actor['id'],now()]);
+    }catch(Throwable $e){if(is_file($path))unlink($path);throw $e;}
+    audit((int)$actor['id'],'gift_contract_generated',$id);$existing=one('SELECT * FROM pg_documents WHERE id=?',[$id]);
+   }
+   // Reusing an unchanged source must also repair its pointer after a saved form.
+   if($i['contract_version']!==$version||$i['contract_hash']!==$existing['sha256']){
+    $signed=one("SELECT id FROM pg_documents WHERE issuer_id=? AND kind='signed_contract' AND version=? AND status IN ('review','approved') LIMIT 1",[$issuer,$version]);
+    query('UPDATE pg_issuers SET contract_version=?,contract_hash=?,contract_status=?,updated_at=? WHERE id=?',[$version,$existing['sha256'],$signed?'review':$existing['status'],now(),$issuer]);
+   }
+   return ['id'=>$existing['id'],'status'=>$existing['status'],'downloadUrl'=>'/api/gift/documents/contract/?issuerId='.$issuer];
+  });
  }
  if($route==='documents/upload/'&&$method==='POST'){
   if($actor['is_staff']??false)gc_admin_guard('supplier-save/','POST',$actor);
@@ -31,7 +50,7 @@ function gc_document_route(string $route,string $method,array $d,array $actor):m
   else{$z=new ZipArchive();if($z->open($file['tmp_name'])===true){$bytes=0;for($n=0;$n<$z->numFiles;$n++)$bytes+=(int)$z->statIndex($n)['size'];if($z->numFiles<500&&$bytes<=25*1024*1024&&$z->locateName('word/document.xml')!==false&&$z->locateName('[Content_Types].xml')!==false){$ext='docx';$mime='application/vnd.openxmlformats-officedocument.wordprocessingml.document';}$z->close();}}
   if($ext==='')throw new ApiError('Формат файла не подтверждён. Допустимы PDF или DOCX');
   $id=gc_uuid();$storage=$id.'.'.$ext;$target=gc_storage().'/'.$storage;if(!move_uploaded_file($file['tmp_name'],$target))throw new RuntimeException('UPLOAD_SAVE_FAILED');chmod($target,0600);$hash=hash_file('sha256',$target);
-  try{transact(function()use($id,$issuer,$i,$storage,$target,$hash,$mime,$actor,$ext){query("INSERT INTO pg_documents(id,issuer_id,kind,version,storage_name,original_name,mime,size_bytes,sha256,status,uploaded_by,created_at) VALUES(?,?,'signed_contract',?,?,?,?,?,?,'review',?,?)",[$id,$issuer,$i['contract_version'],$storage,'signed-contract.'.$ext,$mime,filesize($target),$hash,$actor['id'],now()]);query("UPDATE pg_issuers SET contract_status='review',status='review',updated_at=? WHERE id=?",[now(),$issuer]);audit((int)$actor['id'],'gift_signed_contract_uploaded',$id);});}catch(Throwable $e){unlink($target);throw $e;}
+  try{transact(function()use($id,$issuer,$i,$storage,$target,$hash,$mime,$actor,$ext){$current=one('SELECT contract_version,contract_hash FROM pg_issuers WHERE id=? FOR UPDATE',[$issuer]);if($current['contract_version']!==$i['contract_version']||$current['contract_hash']!==$i['contract_hash'])throw new ApiError('Редакция договора изменилась во время загрузки. Обновите страницу и проверьте файл.',409);query("INSERT INTO pg_documents(id,issuer_id,kind,version,storage_name,original_name,mime,size_bytes,sha256,status,uploaded_by,created_at) VALUES(?,?,'signed_contract',?,?,?,?,?,?,'review',?,?)",[$id,$issuer,$i['contract_version'],$storage,'signed-contract.'.$ext,$mime,filesize($target),$hash,$actor['id'],now()]);query("UPDATE pg_issuers SET contract_status='review',status='review',updated_at=? WHERE id=?",[now(),$issuer]);audit((int)$actor['id'],'gift_signed_contract_uploaded',$id);});}catch(Throwable $e){unlink($target);throw $e;}
   return ['id'=>$id,'status'=>'review'];
  }
  if($route==='documents/list/'&&$method==='GET'){$issuer=(string)($_GET['issuerId']??'');gc_document_access($actor,$issuer,['owner','accountant']);return ['items'=>rows('SELECT id,kind,version,original_name,mime,size_bytes,sha256,status,created_at FROM pg_documents WHERE issuer_id=? ORDER BY created_at DESC',[$issuer])];}

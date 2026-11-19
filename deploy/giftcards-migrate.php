@@ -2,7 +2,7 @@
 declare(strict_types=1);
 if(PHP_SAPI!=='cli')exit(1);
 require dirname(__DIR__).'/app/bootstrap.php';
-$migrations=['001-giftcards'=>'giftcards.sql','002-merchant-credentials'=>'giftcards-credentials.sql','003-operations'=>'giftcards-operations.sql','004-access-audit'=>'giftcards-access-audit.sql','005-program-controls'=>'giftcards-program-controls.sql','006-purchase-records'=>'giftcards-purchase-records.sql','007-order-payments'=>'giftcards-order-payments.sql','008-shared-points'=>'giftcards-shared-points.sql'];$locked=false;
+$migrations=['001-giftcards'=>'giftcards.sql','002-merchant-credentials'=>'giftcards-credentials.sql','003-operations'=>'giftcards-operations.sql','004-access-audit'=>'giftcards-access-audit.sql','005-program-controls'=>'giftcards-program-controls.sql','006-purchase-records'=>'giftcards-purchase-records.sql','007-order-payments'=>'giftcards-order-payments.sql','008-shared-points'=>'giftcards-shared-points.sql','009-contract-reviews'=>'giftcards-contract-reviews.sql'];$locked=false;
 try{
  $locked=(bool)one('SELECT GET_LOCK(?,10) AS locked',['pina-giftcards-migrate'])['locked'];if(!$locked)throw new RuntimeException('Migration already running');
  if(!one("SHOW TABLES LIKE 'pm_clients'"))throw new RuntimeException('Install the existing Pina application first');

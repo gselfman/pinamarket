@@ -123,3 +123,5 @@ The hosting installer retains the existing mail/worker schedules and adds the da
 ### Order payments and shared supplier points
 
 Apply additive migrations 007 (`giftcards-order-payments.sql`) and 008 (`giftcards-shared-points.sql`) using the normal installer. No existing migration checksums or wallet records are rewritten. Configure the common Pina merchant UUID, login `PINA`, issuing-point UUID and secret once. Each supplier needs only its own point UUID and short login. Check bank cash addresses in the administration settings before issuing payment instructions.
+
+Migration 009 (`giftcards-contract-reviews.sql`) adds explicit contract-review metadata without changing existing documents or approvals. Contracts signed by both parties outside the site can be accepted through the administration UI after checking their actual signatures and current contents; no platform facsimile image is required for that signing method. Reuse the normal installer so this migration is applied before the new application starts.

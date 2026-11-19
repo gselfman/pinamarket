@@ -86,5 +86,6 @@ gassert((int)query('SELECT COUNT(*) FROM pm_mail_queue')->fetchColumn()>=2,'noti
 require __DIR__.'/giftcards-operations.php';
 require __DIR__.'/giftcards-bank-import.php';
 require __DIR__.'/giftcards-program-controls.php';
+require __DIR__.'/giftcards-contract-review.php';
 require __DIR__.'/giftcards-access-audit.php';
 echo 'PASS: '.$checks." native PHP/MySQL gift-card integration checks; provider transport and email are stubbed\n";
