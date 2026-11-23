@@ -136,6 +136,10 @@ const SERVICES = [ {
     cancelled: "Отменено"
 };
 
+const legacyAdminRequested = new URLSearchParams(location.search).get("legacy") === "1";
+const adminPath = () => legacyAdminRequested ? "/admin/?legacy=1" : "/admin/";
+let giftcardsAdminUrl = "";
+
 let lastFocus, csrf = "", signed = !1, staff = !1, view = "overview", adminView = "deposits", selected = "", sessionEmail = "", firstPrompt = !1, filter = "Все", query = "", currentPage = 1, registry = {
     items: [],
     page: 1,
@@ -320,6 +324,25 @@ function passwordDialog(first = !1) {
     openModal(`<h2>${first ? "Установите новый пароль" : "Изменение пароля"}</h2><p class="intro">${first ? "Вы вошли по паролю из письма. Можно установить собственный пароль сейчас или пропустить этот шаг." : "Выберите пароль длиной от 12 символов."}</p><form id="password-form" data-first="${first}" class="fields">${first ? "" : '<div class="field"><label for="current">Текущий пароль</label><input id="current" name="current" type="password" autocomplete="current-password" required></div>'}<div class="field"><label for="newpass">Новый пароль</label><input id="newpass" name="password" type="password" minlength="12" autocomplete="new-password" required></div><div class="field"><label for="repeatpass">Повторите новый пароль</label><input id="repeatpass" name="repeat" type="password" minlength="12" autocomplete="new-password" required></div><button class="btn full">Сохранить пароль</button></form>${first ? '<button class="textbtn full" data-action="skip-password">Пропустить этот шаг</button>' : ""}`);
 }
 
+function forgotPassword() {
+    openModal('<h2>Восстановление доступа</h2><p class="intro">Укажите почту своей учётной записи. Отправим ссылку, по которой вы сможете задать новый пароль.</p><form id="forgot-form" class="fields"><div class="field"><label for="forgot-email">Email</label><input id="forgot-email" name="email" type="email" autocomplete="email" required></div><button class="btn full">Отправить ссылку</button></form>');
+}
+
+function passwordRecoveryPage() {
+    document.title = "Восстановление доступа — Pina Market";
+    // A primary email session must not expose the historical account underneath
+    // a recovery dialog or make a reset request look like an authenticated reset.
+    const loginPath = giftcardsAdminUrl || "/login/";
+    $("#app").innerHTML = `<main class="wrap legal-page" id="main"><section class="panel"><h1>Восстановление доступа</h1><p>Для смены пароля нужна одноразовая ссылка из письма. Запросите письмо на почту своей учётной записи.</p><button class="btn" data-action="forgot">Запросить письмо</button><a class="btn outline" href="${esc(loginPath)}">Вернуться ко входу</a></section></main>`;
+    const token = new URLSearchParams(location.search).get("token");
+    if (!token) { forgotPassword(); return; }
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+        openModal('<h2>Проверьте ссылку из письма</h2><p>Ссылка восстановления неполная или повреждена. Запросите новое письмо и откройте ссылку целиком.</p><button class="btn full" data-action="forgot">Запросить новое письмо</button>');
+        return;
+    }
+    openModal('<h2>Новый пароль</h2><p class="intro">Задайте пароль длиной от 12 символов. Сотруднику этот пароль потребуется при настройке аутентификатора.</p><form id="reset-password-form" class="fields"><div class="field"><label for="reset-password">Новый пароль</label><input id="reset-password" name="password" type="password" minlength="12" autocomplete="new-password" required></div><div class="field"><label for="reset-repeat">Повторите пароль</label><input id="reset-repeat" name="repeat" type="password" minlength="12" autocomplete="new-password" required></div><button class="btn full">Сохранить пароль</button></form>');
+}
+
 const purpose = o => o.paymentPurpose;
 
 function receipt(o) {
@@ -352,7 +375,8 @@ async function refresh() {
 
 async function go(v) {
     await sync();
-    view = v, history.replaceState(null,"",v==="admin"?"/admin/":"/cabinet/"), filter = "Все", query = "", currentPage = 1, listFilters = {}, closeModal(), 
+    if (v === "admin" && giftcardsAdminUrl && !legacyAdminRequested) { location.assign(giftcardsAdminUrl); return; }
+    view = v, history.replaceState(null,"",v==="admin"?adminPath():"/cabinet/"), filter = "Все", query = "", currentPage = 1, listFilters = {}, closeModal(),
     render(), await loadList(), window.scrollTo(0, 0);
 }
 
@@ -403,7 +427,8 @@ document.addEventListener("click", e => {
 
           case "admin":
             if (!staff) return void auth();
-            history.replaceState(null, "", "/admin/"), view = "admin", adminView = "deposits", 
+            if (giftcardsAdminUrl && !legacyAdminRequested) { location.assign(giftcardsAdminUrl); break; }
+            history.replaceState(null, "", adminPath()), view = "admin", adminView = "deposits",
             listFilters = {}, currentPage = 1, closeModal(), render(), await loadList();
             break;
 
@@ -504,7 +529,7 @@ document.addEventListener("click", e => {
             break;
 
           case "forgot":
-            openModal('<h2>Восстановление доступа</h2><form id="forgot-form" class="fields"><div class="field"><label for="forgot-email">Email</label><input id="forgot-email" name="email" type="email" required></div><button class="btn full">Отправить ссылку</button></form>');
+            forgotPassword();
             break;
 
           case "read":
@@ -573,8 +598,10 @@ document.addEventListener("click", e => {
                     csrf = r.csrf, firstPrompt = r.prompt, staff = r.staff;
                 }
                 await async function(email) {
-                    if (sessionEmail = email, signed = !0, await sync(), view = location.pathname.startsWith("/admin") && staff ? "admin" : "overview", 
-                    closeModal(), history.replaceState(null,"",view==="admin"?"/admin/":"/cabinet/"), render(), "admin" === view && await loadList(), firstPrompt) passwordDialog(!0); else if (selected) {
+                    sessionEmail = email; signed = !0; await sync();
+                    if (staff && giftcardsAdminUrl && !legacyAdminRequested) { location.assign(giftcardsAdminUrl); return; }
+                    if (view = location.pathname.startsWith("/admin") && staff ? "admin" : "overview",
+                    closeModal(), history.replaceState(null,"",view==="admin"?adminPath():"/cabinet/"), render(), "admin" === view && await loadList(), firstPrompt) passwordDialog(!0); else if (selected) {
                         const id = selected;
                         selected = "", openService(id);
                     }
@@ -603,6 +630,10 @@ document.addEventListener("click", e => {
             if (d.password !== d.repeat) throw Error("Пароли не совпадают");
             {
                 const p = new URLSearchParams(location.search);
+                if (!/^[a-f0-9]{64}$/i.test(p.get("token") || "")) {
+                    passwordRecoveryPage();
+                    throw Error("Откройте полную ссылку восстановления из письма");
+                }
                 await api("reset/", {
                     uid: p.get("uid"),
                     token: p.get("token"),
@@ -726,10 +757,11 @@ document.addEventListener("click", e => {
     try {
         {
             const c = await api("config/");
-            csrf = c.csrf, await sync();
+            csrf = c.csrf; giftcardsAdminUrl = ["/admin/", "/giftcards/#/admin"].includes(c.giftcardsAdminUrl) ? c.giftcardsAdminUrl : ""; await sync();
         }
+        if (location.pathname.startsWith("/reset")) { passwordRecoveryPage(); return; }
         render(), location.pathname.startsWith("/admin") ? signed && staff ? (view = "admin", 
-        render(), await loadList()) : signed ? $("#app").innerHTML = '<div class="wrap"><div class="panel" style="margin:60px 0"><h1>Доступ ограничен</h1><p>Для входа в этот раздел нужна учётная запись сотрудника.</p><a class="btn" href="/cabinet/">Личный кабинет</a></div></div>' : auth() : location.pathname.startsWith("/register") ? auth("register") : (location.pathname.startsWith("/login") || location.pathname.startsWith("/cabinet") && !signed) ? auth() : location.pathname.startsWith("/reset") ? openModal('<h2>Новый пароль</h2><form id="reset-password-form" class="fields"><div class="field"><label>Новый пароль</label><input name="password" type="password" minlength="12" autocomplete="new-password" required></div><div class="field"><label>Повторите пароль</label><input name="repeat" type="password" minlength="12" autocomplete="new-password" required></div><button class="btn full">Сохранить пароль</button></form>') : signed && firstPrompt && passwordDialog(!0);
+        render(), await loadList()) : signed ? $("#app").innerHTML = '<div class="wrap"><div class="panel" style="margin:60px 0"><h1>Доступ ограничен</h1><p>Для входа в этот раздел нужна учётная запись сотрудника.</p><a class="btn" href="/cabinet/">Личный кабинет</a></div></div>' : auth() : location.pathname.startsWith("/register") ? auth("register") : (location.pathname.startsWith("/login") || location.pathname.startsWith("/cabinet") && !signed) ? auth() : signed && firstPrompt && passwordDialog(!0);
     } catch (e) {
         $("#app").innerHTML = `<div class="wrap"><div class="panel" style="margin:60px auto;max-width:600px"><h1>Сервис временно недоступен</h1><p>Не удалось подключиться к серверу. Ваши средства и заявки не изменены. Попробуйте обновить страницу.</p><a class="btn" href="${esc(location.pathname + location.search)}">Повторить загрузку</a><p><a href="/documents/">Документы</a> · <a href="mailto:mail@pina.market">mail@pina.market</a></p></div></div>`,
         toast(e.message);
@@ -737,4 +769,4 @@ document.addEventListener("click", e => {
 })();
 function settingsHTML(){return `<section class="panel"><h2>Внесение наличных</h2><form id="settings-form" class="fields"><div class="field"><label for="cash-address">Подтверждённый адрес кассы и часы работы</label><textarea id="cash-address" name="cashAddress" maxlength="1000" rows="4">${esc(cashAddress)}</textarea></div><label class="checkline"><input name="cashEnabled" type="checkbox" ${cashEnabled?'checked':''}><span>Принимать заявки на внесение наличных</span></label><p class="note">Включайте способ после подтверждения адреса и условий банком. Адрес появится в заявках клиентов.</p><button class="btn">Сохранить</button></form></section>`;}
 
-setInterval(async()=>{if(!signed||document.hidden||!$("#modal").hidden||document.activeElement?.matches("input,textarea,select"))return;try{await refresh()}catch{}},30000);
+setInterval(async()=>{if(location.pathname.startsWith("/reset")||!signed||document.hidden||!$("#modal").hidden||document.activeElement?.matches("input,textarea,select"))return;try{await refresh()}catch{}},30000);

@@ -62,4 +62,15 @@ queue_mail('client1@example.com','Retry test','Test');$GLOBALS['smtp_fail']=true
 
 as_client(1014);query("INSERT INTO pm_services(code,name,description,instructions,conditions_text,product,category,regions_json,updated_at) SELECT 'sort-test','Order test',description,instructions,conditions_text,product,category,regions_json,updated_at FROM pm_services WHERE code='steam'");
 $old=array_column(api_route('admin/services/','GET')['services'],'id');$sorted=array_reverse($old);$new=post('admin/services-order/',['ids'=>$sorted,'expected'=>$old]);expect(array_column($new['services'],'id')===$sorted,'service order persisted');fail_api(fn()=>post('admin/services-order/',['ids'=>$old,'expected'=>$old]),409,'concurrent sort update cannot overwrite order');fail_api(fn()=>post('admin/services-order/',['ids'=>['steam','steam'],'expected'=>$sorted]),400,'service order requires all distinct services');query("DELETE FROM pm_services WHERE code='sort-test'");
+// Password reset requires the emailed one-time token and revokes existing sessions.
+as_client(1001);$beforeReset=one('SELECT password_hash,auth_version FROM pm_clients WHERE id=1001');
+post('forgot/',['email'=>'client2@example.com']);$resetMail=end($GLOBALS['outbox']);
+preg_match('~/reset/\?token=([a-f0-9]{64})~',$resetMail['body'],$tokenMatch);
+expect(isset($tokenMatch[1])&&$resetMail['to']==='client2@example.com','recovery email contains a complete token for the requested account');
+$resetLines=explode("\n",trim($resetMail['body']));expect(end($resetLines)===rtrim(cfg()['base_url'],'/').'/reset/?token='.$tokenMatch[1],'reset link is the last nonempty line with no appended instructions');
+expect(one('SELECT password_hash FROM pm_clients WHERE id=1001')['password_hash']===$beforeReset['password_hash'],'requesting recovery never changes the password');
+$newPassword='ResetFixture2026-NewSecret';fail_api(fn()=>post('reset/',['token'=>str_repeat('0',64),'password'=>$newPassword]),400,'wrong reset token cannot change credentials');
+post('reset/',['token'=>$tokenMatch[1],'password'=>$newPassword]);$afterReset=one('SELECT password_hash,auth_version FROM pm_clients WHERE id=1001');
+expect(password_verify($newPassword,$afterReset['password_hash'])&&(int)$afterReset['auth_version']===(int)$beforeReset['auth_version']+1,'emailed token resets password and revokes old sessions');
+fail_api(fn()=>post('reset/',['token'=>$tokenMatch[1],'password'=>'AnotherFixture2026-Secret']),400,'password reset token is single use');
 echo "PASS: $n MySQL integration checks\n";
