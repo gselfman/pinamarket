@@ -1,6 +1,10 @@
 import {PARTNERS,findCard,transition} from './model.mjs';
 import {esc,money,date} from './legacy-ui.mjs';
 import {COUNTRIES} from './countries.mjs';
+export function brandFieldHTML(value='',prefix='brand-') {
+ return `<div class="field"><label for="${prefix}name">Краткое название бренда</label><input id="${prefix}name" name="brandName" value="${esc(value)}" maxlength="80" placeholder="Название для покупателей"><small class="note">Показывается в каталоге, при выборе и на новых картах. Если оставить пустым, используется полное название компании.</small></div>`;
+}
+export function brandMark(name='') {const words=String(name).match(/[\p{L}\p{N}]+/gu)||[];return (words.length>1?words.slice(0,2).map(w=>Array.from(w)[0]).join(''):Array.from(words[0]||'').slice(0,2).join('')).toLocaleUpperCase('ru');}
 export const CARD_NOMINALS=[100000,200000,300000,500000,1000000,2000000,2500000,5000000,10000000,20000000,30000000,50000000,100000000,200000000,300000000,500000000];
 export const DEFAULT_NOMINALS=[10000000,20000000,30000000,50000000,100000000,500000000];
 export const CATEGORIES=[['vehicles','Автомобили и запчасти'],['food','Продукты питания'],['produce','Овощи и фрукты'],['clothing','Одежда, обувь и вещи'],['consumer_goods','Товары народного потребления'],['electronics','Техника и оборудование'],['software','Софт: установка и настройка на месте'],['other_services','Другие услуги']];

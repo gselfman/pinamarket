@@ -34,4 +34,11 @@ r=await admin('gift/admin/supplier/?id='+externalId);check(r.status===200&&r.dat
 r=await merchant('gift/documents/prepare/',{issuerId:externalId});check(r.status===200,'supplier can later request a PDF after accepting an external copy');
 r=await merchant('gift/documents/contract/?issuerId='+externalId);check(r.status===200&&r.data.startsWith('%PDF-'),'supplier downloads an actual PDF contract');
 r=await admin('gift/admin/supplier/?id='+externalId);check(r.status===200&&r.data.contractReadiness.ready&&r.data.issuer.contract_status==='approved','later PDF generation preserves external contract acceptance');
+// Branding on the already selling supplier needs neither contract editing nor re-approval.
+const liveSupplier=lists.suppliers.find(i=>i.name==='Launch without document blockers');assert.ok(liveSupplier);
+r=await admin('gift/admin/supplier-brand/',{issuerId:liveSupplier.id,brandName:'UEXPO HTTP'});check(r.status===200,'administrator saves brand through real authenticated HTTP');
+r=await merchant('gift/merchant/brand/',{issuerId:liveSupplier.id,brandName:'UEXPO'});check(r.status===200,'owner can update brand of active supplier with existing paid orders');
+r=await other('gift/merchant/brand/',{issuerId:liveSupplier.id,brandName:'Other buyer'});check(r.status===403,'unrelated buyer cannot edit brand through HTTP');
+r=await other('gift/config/');const visibleBrand=r.data.catalog.find(i=>i.id===liveSupplier.id);check(r.status===200&&visibleBrand?.name==='UEXPO'&&visibleBrand.company.name===liveSupplier.name,'public catalogue exposes short brand and retains full legal issuer');
+r=await admin('gift/admin/supplier/?id='+liveSupplier.id);check(r.status===200&&r.data.issuer.status==='active'&&r.data.issuer.brandName==='UEXPO','brand save does not close supplier sales or request a new confirmation');
 console.log(`PASS: ${checks} real PHP/MySQL HTTP, session, SQL registry, private upload, document access and reporting checks`);
