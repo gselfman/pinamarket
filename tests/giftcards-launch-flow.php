@@ -4,7 +4,7 @@ if(!defined('PINA_LIBRARY_ONLY')||!str_contains(cfg()['db']['name'],'test'))thro
 as_client(1000);$launchAdmin=current_client();
 $launch=gc_admin_route('supplier-create/','POST',['name'=>'Launch without document blockers','email'=>'supplier@example.com'],$launchAdmin);$launchId=$launch['issuerId'];
 gc_admin_route('supplier-save/','POST',['issuerId'=>$launchId,'company'=>array_replace($newCompany,['name'=>'Launch without document blockers'])],$launchAdmin);
-$probeLogin='launchpoint';gc_admin_route('merchant-settings/','POST',['scopeId'=>$launchId,'siteId'=>'88888888-8888-4888-8888-888888888888','siteLogin'=>'launchpoint','identityVerified'=>true],$launchAdmin);
+$probeLogin='launchpoint';gc_admin_route('merchant-settings/','POST',['scopeId'=>$launchId,'siteId'=>gc_uuid(),'siteLogin'=>'launchpoint','identityVerified'=>true],$launchAdmin);
 $confirmed=gc_admin_route('issuer-approve/','POST',['issuerId'=>$launchId],$launchAdmin);gassert($confirmed['status']==='active'&&count($confirmed['warnings'])===1,'new supplier programme confirms without preparing, downloading or uploading an agreement');
 gassert(!one('SELECT id FROM pg_documents WHERE issuer_id=?',[$launchId]),'launch does not fabricate a signed document');
 gc_setting_save('sales_enabled',false,$launchAdmin);$sales=gc_admin_route('sales-toggle/','POST',['enabled'=>true],$launchAdmin);gassert($sales['enabled'],'sales open without a password step-up or circular full-flow attestation');
