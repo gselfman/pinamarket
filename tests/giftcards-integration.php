@@ -88,4 +88,5 @@ require __DIR__.'/giftcards-bank-import.php';
 require __DIR__.'/giftcards-program-controls.php';
 require __DIR__.'/giftcards-contract-review.php';
 require __DIR__.'/giftcards-access-audit.php';
+require __DIR__.'/giftcards-launch-flow.php';
 echo 'PASS: '.$checks." native PHP/MySQL gift-card integration checks; provider transport and email are stubbed\n";

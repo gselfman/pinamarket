@@ -20,8 +20,9 @@ function gc_totp_counter(string $secret,string $code,int $lastCounter=-1,?int $t
  foreach([$step,$step-1,$step+1] as $candidate)if($candidate>=0&&$candidate>$lastCounter&&hash_equals(gc_totp_code($secret,$candidate),$code))return $candidate;
  return null;
 }
+// The login session owns expiry (12 hours of inactivity). No separate hourly step-up.
 function gc_staff_otp_valid(array $actor):bool {
- if(!($actor['is_staff']??false)||(int)($_SESSION['gift_staff_otp_until']??0)<=time())return false;
+ if(!($actor['is_staff']??false)||(int)($_SESSION['gift_staff_otp_until']??0)<=0)return false;
  $s=one('SELECT factor_version,secret_ciphertext FROM pg_staff_2fa WHERE client_id=?',[$actor['id']]);
  return $s&&!empty($s['secret_ciphertext'])&&hash_equals((string)($_SESSION['gift_staff_otp_identity']??''),$actor['id'].':'.$actor['auth_version'].':'.$s['factor_version']);
 }
@@ -30,7 +31,7 @@ function gc_staff_session_required(array $actor):void {
  if(!gc_staff_otp_valid($actor))throw new ApiError('Подтвердите вход кодом из приложения-аутентификатора',428);
 }
 function gc_staff_access_grant(array $actor,int $version):array {
- session_regenerate_id(true);$_SESSION['gift_staff_otp_until']=time()+3600;$_SESSION['gift_staff_otp_identity']=$actor['id'].':'.$actor['auth_version'].':'.$version;
+ session_regenerate_id(true);$_SESSION['gift_staff_otp_until']=time()+43200;$_SESSION['gift_staff_otp_identity']=$actor['id'].':'.$actor['auth_version'].':'.$version;
  return ['verified'=>true,'until'=>$_SESSION['gift_staff_otp_until']];
 }
 function gc_recovery_hash(int $id,string $code):string {return hash_hmac('sha256','pina-recovery-v1|'.$id.'|'.$code,gc_key());}
@@ -38,10 +39,12 @@ function gc_staff_access_route(string $route,string $method,array $d,array $acto
  gc_staff_role($actor);
  if($route==='status/'&&$method==='GET'){$s=one('SELECT secret_ciphertext,pending_expires_at FROM pg_staff_2fa WHERE client_id=?',[$actor['id']]);return ['verified'=>gc_staff_otp_valid($actor),'enrolled'=>!empty($s['secret_ciphertext']),'email'=>$actor['email'],'needsPassword'=>(bool)$actor['password_prompt'],'until'=>(int)($_SESSION['gift_staff_otp_until']??0)];}
  if($route==='setup/'&&$method==='POST'){
-  throttle('gift-totp-setup',(string)$actor['id'],5);$password=txt($d,'password',200);
+  throttle('gift-totp-setup',(string)$actor['id'],5);
   $current=one('SELECT * FROM pg_staff_2fa WHERE client_id=?',[$actor['id']]);if(!empty($current['secret_ciphertext'])&&!gc_staff_otp_valid($actor))throw new ApiError('Для замены аутентификатора сначала войдите с текущим или резервным кодом',403);
+  if(empty($current['secret_ciphertext'])){$password=txt($d,'password',200);
   if($actor['password_prompt']){password_rules($password);query('UPDATE pm_clients SET password_hash=?,password_prompt=0,auth_version=auth_version+1 WHERE id=?',[password_hash($password,PASSWORD_DEFAULT),$actor['id']]);$_SESSION['auth_version']=(int)$actor['auth_version']+1;$actor=one('SELECT * FROM pm_clients WHERE id=?',[$actor['id']]);audit((int)$actor['id'],'gift_staff_password_initialized',(string)$actor['id']);}
   elseif(!password_verify($password,$actor['password_hash']))throw new ApiError('Неверный пароль сотрудника',403);
+  }
   $secret=gc_base32_encode(random_bytes(20));$expires=gmdate('Y-m-d H:i:s',time()+600);
   query('INSERT INTO pg_staff_2fa(client_id,pending_ciphertext,pending_expires_at,pending_auth_version,updated_at) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE pending_ciphertext=VALUES(pending_ciphertext),pending_expires_at=VALUES(pending_expires_at),pending_auth_version=VALUES(pending_auth_version),pending_attempts=0,updated_at=VALUES(updated_at)',[$actor['id'],gc_encrypt($secret),$expires,$actor['auth_version'],now()]);
   audit((int)$actor['id'],'gift_staff_totp_setup_requested',(string)$actor['id']);
