@@ -63,7 +63,7 @@ function gc_contract_version(array $issuer,?array $signature):string {
 function gc_issuer_sales_required(array $issuer):void {
  $credentials=gc_credentials($issuer['id']);if($credentials['mode']!=='shared'||($issuer['recipient_login']??'')!==$credentials['recipient_login']||($issuer['vdar_site_id']??'')!==$credentials['site_id'])throw new ApiError('Для новых заказов настройте торговую точку поставщика под общим мерчантом Pina Market',409);
  gc_program_location(json_decode($issuer['program_json'],true,512,JSON_THROW_ON_ERROR));
- if($issuer['contract_status']!=='approved'||!gc_approved_contract($issuer))throw new ApiError('Для новых продаж необходим принятый подписанный договор с текущими реквизитами и условиями карт',409);
+ if(!gc_program_confirmed($issuer)&&($issuer['contract_status']!=='approved'||!gc_approved_contract($issuer)))throw new ApiError('Подтвердите программу поставщика в админке. Договор можно загрузить и проверить отдельно',409);
 }
 function gc_legal_sales_ready():bool {
  $g=gc_settings();

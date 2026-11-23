@@ -6,6 +6,7 @@ declare(strict_types=1);
 function gc_contract_content_hash(array $issuer):string {
  return hash('sha256',json_encode([hash_file('sha256',gc_contract_template($issuer)),$issuer['company_json'],$issuer['program_json'],$issuer['contract_number']],JSON_THROW_ON_ERROR));
 }
+function gc_external_contract_version(array $issuer):string {return hash('sha256','external:'.gc_contract_content_hash($issuer));}
 function gc_approved_contract(array $issuer):?array {
  $docs=rows("SELECT d.*,r.signing_method,r.content_hash FROM pg_documents d LEFT JOIN pg_contract_reviews r ON r.document_id=d.id WHERE d.issuer_id=? AND d.kind='signed_contract' AND d.status='approved' AND d.version=? ORDER BY d.created_at DESC,d.id",[$issuer['id'],$issuer['contract_version']??'']);
  foreach($docs as $doc){
@@ -29,7 +30,7 @@ function gc_contract_readiness(array $issuer):array {
  if($approved)return ['ready'=>true,'issues'=>[],'documentId'=>$approved['id'],'signingMethod'=>$approved['signing_method']??'platform'];
  $doc=one("SELECT id FROM pg_documents WHERE issuer_id=? AND kind='signed_contract' AND status='review' AND version=? ORDER BY created_at DESC,id LIMIT 1",[$issuer['id'],$issuer['contract_version']??'']);
  if($doc)return ['ready'=>false,'issues'=>['Подписанный экземпляр загружен, но ещё не принят. Откройте его проверку и укажите способ подписания.'],'documentId'=>$doc['id']];
- return ['ready'=>false,'issues'=>[empty($issuer['contract_version'])?'Сначала подготовьте договор по сохранённым реквизитам и условиям карт, затем загрузите окончательный экземпляр с обеими подписями.':'Нет принятого подписанного экземпляра текущей редакции. Подготовьте договор, подпишите его обеими сторонами и загрузите окончательный экземпляр.'],'documentId'=>null];
+ return ['ready'=>false,'issues'=>[empty($issuer['contract_version'])?'Подписанный договор ещё не загружен. Можно загрузить договор, полученный любым способом, или скачать PDF в кабинете. Подтверждение программы доступно независимо от договора.':'Нет принятого подписанного экземпляра текущей редакции. Загрузите подписанный договор — предварительно скачивать его из кабинета не требуется. Подтверждение программы доступно отдельно.'],'documentId'=>null];
 }
 function gc_contract_review_state(array $issuer,array $doc):array {
  require_once __DIR__.'/giftcards-documents.php';
@@ -38,9 +39,8 @@ function gc_contract_review_state(array $issuer,array $doc):array {
  if(!in_array($doc['status'],['review','approved'],true))$issues[]='Этот экземпляр отправлен на доработку. Загрузите исправленный подписанный документ.';
  if(empty($issuer['contract_version']))$issues[]='Договор сброшен после сохранения реквизитов или программы. Нажмите «Подготовить договор» в карточке поставщика, затем проверьте актуальность подписанного экземпляра.';
  elseif(!hash_equals((string)$issuer['contract_version'],$doc['version']))$issues[]='Подписанный экземпляр относится к другой редакции. Подготовьте и загрузите договор с текущими реквизитами и условиями карт.';
- if(!$source)$issues[]='Не найдена исходная редакция договора. Сначала подготовьте договор в карточке поставщика и загрузите подписанный экземпляр.';
- elseif(!gc_contract_file_valid($source))$issues[]='Исходный договор не прошёл проверку целостности. Обратитесь к администратору хранилища документов; приём экземпляра остановлен.';
- $current=hash_equals(gc_contract_version($issuer,null),$doc['version']);
+ if($source&&!gc_contract_file_valid($source))$issues[]='Исходный договор не прошёл проверку целостности. Обратитесь к администратору хранилища документов; приём экземпляра остановлен.';
+ $current=hash_equals(gc_external_contract_version($issuer),$doc['version'])||hash_equals(gc_contract_version($issuer,null),$doc['version']);
  if(!$current){try{$signature=gc_signature_config();$current=$signature!==null&&hash_equals(gc_contract_version($issuer,$signature),$doc['version']);}catch(Throwable){}}
  // Reviewed manual copies stay current when only the site's facsimile changes.
  $review=one('SELECT signing_method,content_hash FROM pg_contract_reviews WHERE document_id=?',[$doc['id']]);
@@ -62,6 +62,7 @@ function gc_approve_contract(array $data,array $actor):array {
   if($old){if($old['signing_method']!==$method||!hash_equals($old['content_hash'],$hash))throw new ApiError('Принятый экземпляр нельзя привязать к другому способу подписания или условиям. Загрузите новую редакцию.',409);return ['status'=>'approved','signingMethod'=>$method];}
   query('INSERT INTO pg_contract_reviews(document_id,signing_method,content_hash,reviewed_by,reviewed_at) VALUES(?,?,?,?,?)',[$id,$method,$hash,$actor['id'],now()]);
   query("UPDATE pg_documents SET status='approved' WHERE id=?",[$id]);
+  query("UPDATE pg_issuers SET contract_status='approved',updated_at=? WHERE id=?",[now(),$issuer['id']]);
   audit((int)$actor['id'],'gift_document_approved',$id,['sha256'=>$doc['sha256'],'signingMethod'=>$method,'contentHash'=>$hash]);return ['status'=>'approved','signingMethod'=>$method];
  });
 }
