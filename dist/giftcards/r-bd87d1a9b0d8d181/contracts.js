@@ -4,7 +4,7 @@ import {COUNTRIES} from './countries.js';
 // This browser generator produces a clearly numbered DEMO draft from the agreed Word template.
 export async function generateContract(company,record) {
  const country=COUNTRIES.find(c=>c.code===company.country)?.name||'Кыргызская Республика',fulfillment=COUNTRIES.find(c=>c.code===company.fulfillmentCountry)?.name||country;
- const source=await fetch('/giftcards/r-30847c726e1355f4/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
+ const source=await fetch('/giftcards/r-bd87d1a9b0d8d181/assets/agency-template.docx');if(!source.ok)throw Error('Шаблон договора временно недоступен.');
  const zip=await window.JSZip.loadAsync(await source.arrayBuffer()),path='word/document.xml',xml=await zip.file(path).async('string'),doc=new DOMParser().parseFromString(xml,'application/xml'),ns='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
  if(doc.querySelector('parsererror'))throw Error('Не удалось прочитать шаблон.');
  const text=e=>[...e.getElementsByTagNameNS(ns,'t')].map(n=>n.textContent).join('');
