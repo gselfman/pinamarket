@@ -25,7 +25,7 @@ function gc_document_route(string $route,string $method,array $d,array $actor):m
     $source=one("SELECT * FROM pg_documents WHERE issuer_id=? AND kind='generated_contract' AND version=? ORDER BY created_at DESC,id LIMIT 1",[$issuer,$approved['version']]);
     if($source&&gc_contract_file_valid($source))return ['id'=>$source['id'],'status'=>$source['status'],'downloadUrl'=>'/api/gift/documents/contract/?issuerId='.$issuer];
    }
-   $template=gc_contract_template($i);$signature=gc_signature_config();$version=gc_contract_version($i,$signature);
+   $template=gc_contract_template($i);$signature=gc_signature_config();$version=($approved['signing_method']??'')==='manual'?$approved['version']:gc_contract_version($i,$signature);
    $existing=one("SELECT * FROM pg_documents WHERE issuer_id=? AND kind='generated_contract' AND version=? AND mime='application/pdf' ORDER BY created_at DESC,id LIMIT 1",[$issuer,$version]);
    if(!$existing){
     $id=gc_uuid();$storage=$id.'.pdf';$path=gc_storage().'/'.$storage;
@@ -37,7 +37,7 @@ function gc_document_route(string $route,string $method,array $d,array $actor):m
    // Reusing an unchanged source must also repair its pointer after a saved form.
    if($i['contract_version']!==$version||$i['contract_hash']!==$existing['sha256']){
     $signed=one("SELECT id FROM pg_documents WHERE issuer_id=? AND kind='signed_contract' AND version=? AND status IN ('review','approved') LIMIT 1",[$issuer,$version]);
-    query('UPDATE pg_issuers SET contract_version=?,contract_hash=?,contract_status=?,updated_at=? WHERE id=?',[$version,$existing['sha256'],$signed?'review':$existing['status'],now(),$issuer]);
+    query('UPDATE pg_issuers SET contract_version=?,contract_hash=?,contract_status=?,updated_at=? WHERE id=?',[$version,$existing['sha256'],$approved?'approved':($signed?'review':$existing['status']),now(),$issuer]);
    }
    return ['id'=>$existing['id'],'status'=>$existing['status'],'downloadUrl'=>'/api/gift/documents/contract/?issuerId='.$issuer];
   });

@@ -24,11 +24,14 @@ r=await admin('gift/admin/document-approve/',{documentId:signedId,signingMethod:
 r=await admin('gift/admin/supplier/?id='+manualSupplier.id);check(r.status===200&&r.data.contractReadiness.ready&&r.data.documents.some(d=>d.id===signedId&&d.signing_method==='manual'&&d.reviewed_by),'supplier detail exposes review state and real reviewer');
 const manualProgramme=r.data.issuer.program;r=await admin('gift/admin/issuer-approve/',{issuerId:manualSupplier.id,program:manualProgramme,checksVerified:true});check(r.status===200&&r.data.status==='active','programme opens after manual review without uploading a facsimile');
 // Uploading an externally obtained agreement must not require a generated source.
-r=await admin('gift/admin/supplier-create/',{name:'External upload without download',email:'external-upload@example.invalid'});check(r.status===200,'create external-upload fixture');const externalId=r.data.issuerId;
+r=await admin('gift/admin/supplier-create/',{name:'External upload without download',email:'supplier@example.com'});check(r.status===200,'create external-upload fixture');const externalId=r.data.issuerId;
 r=await admin('gift/admin/supplier/?id='+manualSupplier.id);const savedCompany={...r.data.issuer.company,territoryConfirmed:true};
 r=await admin('gift/admin/supplier-save/',{issuerId:externalId,company:savedCompany});check(r.status===200,'save external-upload company without preparing a contract');
-form=new FormData();form.set('issuerId',externalId);form.set('file',pdf,'externally-obtained.pdf');r=await admin('gift/admin/documents-upload/',form,true);check(r.status===200,'signed document uploads without prepare or download');const externalDoc=r.data.id;
+form=new FormData();form.set('issuerId',externalId);form.set('file',pdf,'externally-obtained.pdf');r=await merchant('gift/documents/upload/',form,true);check(r.status===200,'supplier uploads a signed document without prepare or download');const externalDoc=r.data.id;
 r=await admin('gift/admin/document-review/?id='+externalDoc);check(r.status===200&&r.data.issues.length===0&&r.data.signingMethod==='manual','external copy can be reviewed without a generated source');
 r=await admin('gift/admin/document-approve/',{documentId:externalDoc,signingMethod:'manual',signaturesVerified:true,finalCopyVerified:true});check(r.status===200,'external copy is accepted independently of site generation');
 r=await admin('gift/admin/supplier/?id='+externalId);check(r.status===200&&r.data.documents.every(d=>d.kind!=='generated_contract'),'upload and acceptance never create or require a downloaded source');
+r=await merchant('gift/documents/prepare/',{issuerId:externalId});check(r.status===200,'supplier can later request a PDF after accepting an external copy');
+r=await merchant('gift/documents/contract/?issuerId='+externalId);check(r.status===200&&r.data.startsWith('%PDF-'),'supplier downloads an actual PDF contract');
+r=await admin('gift/admin/supplier/?id='+externalId);check(r.status===200&&r.data.contractReadiness.ready&&r.data.issuer.contract_status==='approved','later PDF generation preserves external contract acceptance');
 console.log(`PASS: ${checks} real PHP/MySQL HTTP, session, SQL registry, private upload, document access and reporting checks`);
