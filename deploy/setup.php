@@ -20,7 +20,7 @@ function setting(string $key,string $label,string $default=''):string{
  return ask($label,$default);
 }
 function put_private(string $path,string $content):void{$tmp=$path.'.new';if(file_put_contents($tmp,$content,LOCK_EX)===false)throw new RuntimeException('Не удалось записать '.$path);chmod($tmp,0600);if(!rename($tmp,$path))throw new RuntimeException('Не удалось сохранить '.$path);}
-function copy_tree(string $src,string $dst):void{if(!is_dir($dst))mkdir($dst,0755,true);chmod($dst,0755);foreach(array_diff(scandir($src),['.','..']) as $name){$from=$src.'/'.$name;$to=$dst.'/'.$name;if(is_dir($from)&&!is_link($from))copy_tree($from,$to);else{if(!copy($from,$to))throw new RuntimeException('Не удалось сохранить каталог проверки сертификата.');chmod($to,0644);}}}
+function copy_tree(string $src,string $dst,int $directoryMode=0755,int $fileMode=0644):void{if(!is_dir($dst))mkdir($dst,$directoryMode,true);chmod($dst,$directoryMode);foreach(array_diff(scandir($src),['.','..']) as $name){$from=$src.'/'.$name;$to=$dst.'/'.$name;if(is_dir($from)&&!is_link($from))copy_tree($from,$to,$directoryMode,$fileMode);else{if(!copy($from,$to))throw new RuntimeException('Не удалось сохранить каталог приложения.');chmod($to,$fileMode);}}}
 function copy_file(string $src,string $dst,int $mode=0644):void{$tmp=$dst.'.pina-new';if(!copy($src,$tmp))throw new RuntimeException('Не удалось скопировать '.$dst);chmod($tmp,$mode);if(!rename($tmp,$dst))throw new RuntimeException('Не удалось заменить '.$dst);}
 // Preserve the previous tree as data. Never execute another financial application at /V0.
 function archive_v0(string $src,string $dst):void{
@@ -134,6 +134,7 @@ try{
  // Keep running PHP code immutable while Git updates the source checkout.
  $releaseApp=$root.'/var/releases/'.$stamp.'/app';if(!mkdir($releaseApp,0700,true))throw new RuntimeException('Не удалось создать приватную версию приложения.');
  foreach(scandir($root.'/app') as $name){if(in_array($name,['.','..','config.php','config.php.new','template.html'],true)||str_ends_with($name,'.lock'))continue;$from=$root.'/app/'.$name;if(is_file($from))copy_file($from,$releaseApp.'/'.$name,0600);}
+ if(is_dir($root.'/app/vendor'))copy_tree($root.'/app/vendor',$releaseApp.'/vendor',0700,0600);
  put_private($releaseApp.'/config.php',"<?php\nreturn ".var_export($config,true).";\n");
  put_private($releaseApp.'/template.html',$html);
  $assetNames=['app.js','legal.js','style.css','pina-logo.png','favicon.ico'];foreach(array_merge(glob($root.'/dist/brand-*.png'),glob($root.'/dist/brand-*.svg'),glob($root.'/dist/favicon-*.png'),glob($root.'/dist/apple-touch-icon-*.png')) as $brandFile)$assetNames[]=basename($brandFile);

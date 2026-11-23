@@ -171,6 +171,10 @@ git archive HEAD | tar -xf - -C "$PINA_INSTALL_TEMP/giftcode-repeat"
 PATH="$PINA_CRON_STUB:$PATH" bash "$PINA_INSTALL_TEMP/giftcode-repeat/deploy/giftcards-hosting.sh" --deploy
 [[ "$(cat "$PINA_INSTALL_TEMP/htdocs/V0/pina-path.json")" == "$old_pointer" ]]
 php -r '$a=require $argv[1];$b=require $argv[2];if($a["giftcards"]["encryption_key"]!==$b["giftcards"]["encryption_key"]||$a["db"]!==$b["db"])exit(1);' "$PINA_INSTALL_TEMP/giftcode-good/app/config.php" "$PINA_INSTALL_TEMP/giftcode-repeat/app/config.php"
+gift_active_app="$(php -r '$p=json_decode(file_get_contents($argv[1]),true);echo $p["app"];' "$PINA_INSTALL_TEMP/htdocs/pina-path.json")"
+[[ -f "$gift_active_app/vendor/tfpdf/tfpdf.php" && -f "$gift_active_app/vendor/tfpdf/font/unifont/ttfonts.php" && -f "$gift_active_app/vendor/tfpdf/font/unifont/DejaVuSans.ttf" ]]
+[[ "$(stat -c %a "$gift_active_app/vendor/tfpdf")" == 700 && "$(stat -c %a "$gift_active_app/vendor/tfpdf/tfpdf.php")" == 600 ]]
+if sudo -u nobody test -r "$gift_active_app/vendor/tfpdf/tfpdf.php"; then echo 'Private PDF library exposed' >&2; exit 1; fi
 echo 'PASS: exact gift-card hosting upgrade, read-only precheck, foreign-V0 refusal, failed-switch rollback, private V0 preservation, homepage switch, repeat deployment, unchanged DB/key and deduplicated cron'
 # Exercise the browser controller's exact CSRF header against the deployed PHP endpoint.
 python3 - <<'PY'
