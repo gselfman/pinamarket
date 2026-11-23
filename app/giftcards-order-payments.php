@@ -1,5 +1,8 @@
 <?php
 declare(strict_types=1);
+function gc_default_payment_instructions():string {
+ return 'Оплатите заказ через выбранную кассу банка по реквизитам, указанным в заказе. Возьмите с собой паспорт, сообщите кассиру номер заказа и ID покупателя. Перед оплатой уточните у банка размер возможной комиссии и сохраните документ об оплате. После подтверждения поступления полной суммы в личном кабинете станет доступен выпуск кода подарочной карты.';
+}
 function gc_cash_locations(bool $activeOnly=false):array {
  $g=gc_settings();
  if(array_key_exists('payment_cash_locations',$g))$locations=$g['payment_cash_locations'];
